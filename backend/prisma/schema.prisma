@@ -1,0 +1,347 @@
+// RETROCONSOLE 1981 — PostgreSQL schema
+// ORM: Prisma. Run `npx prisma migrate dev` to create migrations.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ----------------------------------------------------------------------------
+// Auth & users
+// ----------------------------------------------------------------------------
+
+model Role {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique // admin | customer
+  users     User[]
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("roles")
+}
+
+model User {
+  id           Int     @id @default(autoincrement())
+  email        String  @unique
+  passwordHash String  @map("password_hash")
+  firstName    String? @map("first_name")
+  lastName     String? @map("last_name")
+  phone        String?
+  coins        Int     @default(0) // "pixel coins" loyalty balance
+  roleId       Int     @map("role_id")
+  role         Role    @relation(fields: [roleId], references: [id])
+  isActive     Boolean @default(true) @map("is_active")
+
+  addresses ShippingAddress[]
+  carts     Cart[]
+  orders    Order[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([roleId])
+  @@map("users")
+}
+
+// ----------------------------------------------------------------------------
+// Catalog
+// ----------------------------------------------------------------------------
+
+model Category {
+  id          Int        @id @default(autoincrement())
+  name        String
+  slug        String     @unique
+  description String?
+  imageColor  String?    @map("image_color") // accent color for the retro tile
+  glyph       String? // short label shown on the category tile (e.g. CART, PAD)
+  parentId    Int?       @map("parent_id")
+  parent      Category?  @relation("CategoryTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children    Category[] @relation("CategoryTree")
+  products    Product[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([parentId])
+  @@index([slug])
+  @@map("product_categories")
+}
+
+model Product {
+  id            Int      @id @default(autoincrement())
+  name          String
+  slug          String   @unique
+  description   String?
+  sku           String   @unique
+  price         Decimal  @db.Decimal(10, 2)
+  discountPrice Decimal? @map("discount_price") @db.Decimal(10, 2)
+  stock         Int      @default(0)
+  status        String   @default("active") // active | inactive
+  rarity        String   @default("common") // common | rare | epic | legendary
+  platform      String? // e.g. "SEGA-16 / 1992 / SEALED"
+  artVariant    String?  @map("art_variant") // retro card art class hint
+
+  categoryId Int?      @map("category_id")
+  category   Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  images     ProductImage[]
+  attributes ProductAttribute[]
+  cartItems  CartItem[]
+  orderItems OrderItem[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([categoryId])
+  @@index([status])
+  @@index([rarity])
+  @@index([price])
+  @@map("products")
+}
+
+model ProductImage {
+  id        Int      @id @default(autoincrement())
+  productId Int      @map("product_id")
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  url       String
+  alt       String?
+  position  Int      @default(0)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([productId])
+  @@map("product_images")
+}
+
+model ProductAttribute {
+  id        Int      @id @default(autoincrement())
+  productId Int      @map("product_id")
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  name      String // e.g. "size", "color"
+  value     String // e.g. "Large", "Magenta"
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([productId])
+  @@index([name])
+  @@map("product_attributes")
+}
+
+// ----------------------------------------------------------------------------
+// Cart
+// ----------------------------------------------------------------------------
+
+model Cart {
+  id        Int        @id @default(autoincrement())
+  userId    Int?       @map("user_id")
+  user      User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String?    @unique // guest cart token
+  items     CartItem[]
+  createdAt DateTime   @default(now()) @map("created_at")
+  updatedAt DateTime   @updatedAt @map("updated_at")
+
+  @@index([userId])
+  @@map("carts")
+}
+
+model CartItem {
+  id        Int      @id @default(autoincrement())
+  cartId    Int      @map("cart_id")
+  cart      Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  productId Int      @map("product_id")
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  quantity  Int      @default(1)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([cartId, productId])
+  @@index([cartId])
+  @@map("cart_items")
+}
+
+// ----------------------------------------------------------------------------
+// Orders
+// ----------------------------------------------------------------------------
+
+model Order {
+  id          Int    @id @default(autoincrement())
+  orderNumber String @unique @map("order_number")
+  userId      Int?   @map("user_id")
+  user        User?  @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  status      String  @default("pending") // pending|paid|shipped|delivered|cancelled
+  subtotal    Decimal @db.Decimal(10, 2)
+  shippingFee Decimal @default(0) @map("shipping_fee") @db.Decimal(10, 2)
+  total       Decimal @db.Decimal(10, 2)
+
+  // snapshot of shipping address at time of order
+  shipName       String? @map("ship_name")
+  shipPhone      String? @map("ship_phone")
+  shipLine1      String? @map("ship_line1")
+  shipLine2      String? @map("ship_line2")
+  shipCity       String? @map("ship_city")
+  shipState      String? @map("ship_state")
+  shipPostalCode String? @map("ship_postal_code")
+  shipCountry    String? @map("ship_country")
+
+  shippingMethodId Int?            @map("shipping_method_id")
+  shippingMethod   ShippingMethod? @relation(fields: [shippingMethodId], references: [id], onDelete: SetNull)
+
+  trackingNumber String? @map("tracking_number")
+  customerEmail  String  @map("customer_email")
+
+  items     OrderItem[]
+  payment   Payment?
+  emailLogs EmailLog[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("orders")
+}
+
+model OrderItem {
+  id        Int      @id @default(autoincrement())
+  orderId   Int      @map("order_id")
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId Int?     @map("product_id")
+  product   Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  // snapshot fields (so order history is stable even if product changes)
+  name      String
+  sku       String
+  unitPrice Decimal  @map("unit_price") @db.Decimal(10, 2)
+  quantity  Int
+  lineTotal Decimal  @map("line_total") @db.Decimal(10, 2)
+
+  @@index([orderId])
+  @@index([productId])
+  @@map("order_items")
+}
+
+model Payment {
+  id            Int       @id @default(autoincrement())
+  orderId       Int       @unique @map("order_id")
+  order         Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  method        String // card | stripe | paypal | cod
+  status        String    @default("pending") // pending|paid|failed|refunded
+  amount        Decimal   @db.Decimal(10, 2)
+  transactionId String?   @map("transaction_id")
+  paidAt        DateTime? @map("paid_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@map("payments")
+}
+
+// ----------------------------------------------------------------------------
+// Shipping
+// ----------------------------------------------------------------------------
+
+model ShippingMethod {
+  id        Int      @id @default(autoincrement())
+  name      String
+  fee       Decimal  @default(0) @db.Decimal(10, 2)
+  zone      String? // region/zone label, e.g. "Worldwide", "Domestic"
+  estimate  String? // e.g. "1-2 days"
+  enabled   Boolean  @default(true)
+  orders    Order[]
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("shipping_methods")
+}
+
+model ShippingAddress {
+  id         Int      @id @default(autoincrement())
+  userId     Int      @map("user_id")
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  label      String? // "Home", "Work"
+  fullName   String   @map("full_name")
+  phone      String?
+  line1      String
+  line2      String?
+  city       String
+  state      String?
+  postalCode String   @map("postal_code")
+  country    String
+  isDefault  Boolean  @default(false) @map("is_default")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@index([userId])
+  @@map("shipping_addresses")
+}
+
+// ----------------------------------------------------------------------------
+// Payment method configuration (admin)
+// ----------------------------------------------------------------------------
+
+model PaymentMethodConfig {
+  id        Int      @id @default(autoincrement())
+  method    String   @unique // card | stripe | paypal | cod
+  label     String
+  enabled   Boolean  @default(false)
+  // API keys stored encrypted at rest (JSON of key->encrypted value)
+  configEnc String?  @map("config_enc")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("payment_methods")
+}
+
+// ----------------------------------------------------------------------------
+// Email: SMTP settings, templates, logs
+// ----------------------------------------------------------------------------
+
+model SmtpSettings {
+  id             Int      @id @default(autoincrement())
+  host           String   @default("smtp.gmail.com")
+  port           Int      @default(587)
+  username       String?
+  passwordEnc    String?  @map("password_enc") // encrypted at rest
+  encryptionType String   @default("tls") @map("encryption_type") // tls | ssl
+  senderEmail    String?  @map("sender_email")
+  senderName     String?  @map("sender_name")
+  provider       String   @default("gmail")
+  enabled        Boolean  @default(false)
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@map("smtp_settings")
+}
+
+model EmailTemplate {
+  id        Int      @id @default(autoincrement())
+  key       String   @unique // order_confirmation, payment_confirmation, ...
+  name      String
+  subject   String
+  body      String // HTML with {{variables}}
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("email_templates")
+}
+
+model EmailLog {
+  id             Int       @id @default(autoincrement())
+  recipient      String
+  subject        String
+  status         String // sent | failed | queued
+  errorMessage   String?   @map("error_message")
+  templateKey    String?   @map("template_key")
+  relatedOrderId Int?      @map("related_order_id")
+  relatedOrder   Order?    @relation(fields: [relatedOrderId], references: [id], onDelete: SetNull)
+  sentAt         DateTime? @map("sent_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  @@index([status])
+  @@index([relatedOrderId])
+  @@map("email_logs")
+}
