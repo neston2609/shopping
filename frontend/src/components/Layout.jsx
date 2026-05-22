@@ -4,6 +4,9 @@ import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 
+// Admin app lives at /admin/ behind nginx in prod; override for local dev.
+const ADMIN_URL = import.meta.env.VITE_ADMIN_URL || '/admin/';
+
 const NAV_FALLBACK = [
   { label: 'HOME', sub: 'main quest', to: '/' },
   { label: 'CONSOLES', sub: 'level 1-99', to: '/shop?category=consoles' },
@@ -67,6 +70,9 @@ export default function Layout() {
           <span className="pill">EN · USD</span>
           {user ? (
             <>
+              {user.role === 'admin' && (
+                <a className="pill" href={ADMIN_URL} style={{ color: 'var(--gold)', borderColor: 'var(--gold)' }}>⚙ ADMIN</a>
+              )}
               <Link className="pill" to="/account">{(user.firstName || 'PLAYER').toUpperCase()}</Link>
               <span className="pill" style={{ color: 'var(--lime)', borderColor: 'var(--lime)' }} onClick={logout}>SIGN OUT</span>
             </>
