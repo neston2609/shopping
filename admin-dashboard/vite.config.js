@@ -3,11 +3,13 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
+  // Served under /admin/ behind nginx in production.
+  base: '/admin/',
   server: {
     port: 5174,
     proxy: {
       '/api': {
-        target: process.env.VITE_API_PROXY || 'http://localhost:4000',
+        target: process.env.VITE_API_PROXY || 'http://localhost:9000',
         changeOrigin: true,
       },
     },

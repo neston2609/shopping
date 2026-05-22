@@ -1,6 +1,6 @@
 # RETROCONSOLE 1981 — REST API
 
-Base URL: `http://localhost:4000/api`
+Base URL: `http://localhost:9000/api`
 
 Auth: send `Authorization: Bearer <token>` (returned by login/register). Cart also works
 for guests via an httpOnly `cart_token` cookie. Admin routes require an `admin` role.

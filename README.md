@@ -40,10 +40,10 @@ cp .env.example .env            # then edit .env (see below)
 npm install
 npx prisma migrate dev --name init   # creates tables on your remote Postgres
 npm run db:seed                 # roles, admin, demo products, shipping, templates…
-npm run dev                     # API on http://localhost:4000
+npm run dev                     # API on http://localhost:9000
 ```
 
-Health check: <http://localhost:4000/api/health>
+Health check: <http://localhost:9000/api/health>
 
 ### Required `.env` values
 
@@ -68,7 +68,7 @@ npm install
 npm run dev                     # http://localhost:5173
 ```
 
-The dev server proxies `/api` to the backend (`http://localhost:4000` by default; override
+The dev server proxies `/api` to the backend (`http://localhost:9000` by default; override
 with `VITE_API_PROXY` in `.env`).
 
 ## 3. Admin dashboard setup

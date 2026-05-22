@@ -11,7 +11,7 @@ function required(name, fallback) {
 
 const env = {
   nodeEnv: process.env.NODE_ENV || 'development',
-  port: parseInt(process.env.PORT || '4000', 10),
+  port: parseInt(process.env.PORT || '9000', 10),
   databaseUrl: required('DATABASE_URL'),
   clientOrigins: (process.env.CLIENT_ORIGINS || 'http://localhost:5173,http://localhost:5174')
     .split(',')
