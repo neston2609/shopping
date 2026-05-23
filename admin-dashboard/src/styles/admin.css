@@ -63,7 +63,9 @@ tr:hover td{background:#150827;}
 .badge.paid,.badge.delivered,.badge.active,.badge.sent{border-color:var(--lime);color:var(--lime);}
 .badge.shipped{border-color:var(--cyan);color:var(--cyan);}
 .badge.cancelled,.badge.failed,.badge.inactive{border-color:var(--magenta);color:var(--magenta);}
-.badge.pending{border-color:var(--gold);color:var(--gold);}
+.badge.pending,.badge.awaiting_payment{border-color:var(--gold);color:var(--gold);}
+.badge.payment_review,.badge.submitted{border-color:var(--epic);color:var(--epic);}
+.badge.awaiting_shipment{border-color:var(--lime);color:var(--lime);}
 
 .error-msg{background:#3a0820;border:3px solid var(--magenta);color:#ffd0e4;padding:12px;margin:12px 0;}
 .success-msg{background:#0b2900;border:3px solid var(--lime);color:#dfffc8;padding:12px;margin:12px 0;}

@@ -2,6 +2,7 @@ const express = require('express');
 const { authenticate } = require('../middleware/auth');
 const { requireRole } = require('../middleware/rbac');
 const { validate } = require('../middleware/validate');
+const { qrUpload } = require('../lib/upload');
 
 const products = require('../controllers/admin/adminProductController');
 const categories = require('../controllers/admin/adminCategoryController');
@@ -41,6 +42,7 @@ router.get('/orders/:id', orders.getOne);
 router.patch('/orders/:id/status', validate(orders.statusSchema), orders.updateStatus);
 router.patch('/orders/:id/tracking', validate(orders.trackingSchema), orders.setTracking);
 router.patch('/orders/:id/payment', validate(orders.paymentSchema), orders.updatePayment);
+router.patch('/orders/:id/approve-payment', orders.approvePayment);
 
 // Customers
 router.get('/customers', customers.list);
@@ -55,6 +57,7 @@ router.delete('/shipping/:id', shipping.remove);
 // Payment method config
 router.get('/payments', payments.list);
 router.put('/payments/:method', validate(payments.updateSchema), payments.update);
+router.post('/payments/:method/qr', qrUpload.single('qr'), payments.uploadQr);
 
 // SMTP settings
 router.get('/smtp', smtp.get);

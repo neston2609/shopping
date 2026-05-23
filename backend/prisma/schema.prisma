@@ -227,11 +227,15 @@ model Payment {
   id            Int       @id @default(autoincrement())
   orderId       Int       @unique @map("order_id")
   order         Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  method        String // card | stripe | paypal | cod
-  status        String    @default("pending") // pending|paid|failed|refunded
+  method        String // card | stripe | paypal | cod | bank_transfer
+  status        String    @default("pending") // pending|submitted|paid|failed|refunded
   amount        Decimal   @db.Decimal(10, 2)
   transactionId String?   @map("transaction_id")
   paidAt        DateTime? @map("paid_at")
+  // bank-transfer payment slip uploaded by the customer
+  slipUrl        String?   @map("slip_url")
+  slipUploadedAt DateTime? @map("slip_uploaded_at")
+  payerNote      String?   @map("payer_note")
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
 
@@ -284,11 +288,18 @@ model ShippingAddress {
 
 model PaymentMethodConfig {
   id        Int      @id @default(autoincrement())
-  method    String   @unique // card | stripe | paypal | cod
+  method    String   @unique // card | stripe | paypal | cod | bank_transfer
   label     String
   enabled   Boolean  @default(false)
   // API keys stored encrypted at rest (JSON of key->encrypted value)
   configEnc String?  @map("config_enc")
+  // Bank-transfer display info (public, shown to customer at checkout)
+  qrImageUrl        String? @map("qr_image_url")
+  bankName          String? @map("bank_name")
+  bankAccountName   String? @map("bank_account_name")
+  bankAccountNumber String? @map("bank_account_number")
+  bankBranch        String? @map("bank_branch")
+  bankInstructions  String? @map("bank_instructions")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 

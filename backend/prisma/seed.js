@@ -61,6 +61,37 @@ const TEMPLATES = [
     body: shell('Order Cancelled', `<p>Hi {{customer_name}},</p>
       <p>Order <b>{{order_id}}</b> has been cancelled and any charge of {{order_total}} will be refunded.</p>`),
   },
+  {
+    key: 'bank_transfer_instructions',
+    name: 'Bank Transfer Instructions',
+    subject: 'Payment Instructions — Order {{order_id}}',
+    body: shell('Bank Transfer Instructions', `<p>Hi {{customer_name}},</p>
+      <p>Your order <b style="color:#a3ff3c">{{order_id}}</b> is reserved. Please transfer <b style="color:#ffcb3c">{{order_total}}</b> to:</p>
+      <div style="border:2px dashed #22d3ff;padding:12px;margin:12px 0">
+        <div><b style="color:#22d3ff">BANK</b> {{bank_name}}</div>
+        <div><b style="color:#22d3ff">ACCOUNT NAME</b> {{bank_account_name}}</div>
+        <div><b style="color:#22d3ff">ACCOUNT NO.</b> {{bank_account_number}}</div>
+        <div><b style="color:#22d3ff">BRANCH</b> {{bank_branch}}</div>
+      </div>
+      <p>{{bank_instructions}}</p>
+      <p><img src="{{qr_url}}" alt="Payment QR" style="max-width:240px;border:3px solid #fff"/></p>
+      <p>After paying, upload your payment slip on your order page so we can verify and ship.</p>`),
+  },
+  {
+    key: 'admin_payment_review',
+    name: 'Admin — Payment Slip Uploaded',
+    subject: 'Payment slip uploaded — Order {{order_id}}',
+    body: shell('Payment Slip Uploaded', `<p>A customer uploaded a payment slip awaiting your review.</p>
+      <div style="border:2px dashed #ffcb3c;padding:12px;margin:12px 0">
+        <div><b style="color:#22d3ff">ORDER</b> {{order_id}}</div>
+        <div><b style="color:#22d3ff">CUSTOMER</b> {{customer_email}}</div>
+        <div><b style="color:#22d3ff">TOTAL</b> {{order_total}}</div>
+        <div><b style="color:#22d3ff">NOTE</b> {{payer_note}}</div>
+      </div>
+      <p><b style="color:#22d3ff">SLIP</b> <a href="{{slip_url}}">{{slip_url}}</a></p>
+      <p><img src="{{slip_url}}" alt="Payment slip" style="max-width:320px;border:3px solid #fff"/></p>
+      <p>Approve it in the admin dashboard to move the order to "awaiting shipment".</p>`),
+  },
 ];
 
 const CATEGORIES = [
@@ -105,6 +136,16 @@ const PAYMENT_METHODS = [
   { method: 'stripe', label: 'Stripe', enabled: true },
   { method: 'paypal', label: 'PayPal', enabled: true },
   { method: 'cod', label: 'Cash on Delivery', enabled: true },
+  {
+    method: 'bank_transfer',
+    label: 'Bank Transfer / QR',
+    enabled: true,
+    bankName: 'Kasikorn Bank (KBank)',
+    bankAccountName: 'RETROCONSOLE 1981 CO., LTD.',
+    bankAccountNumber: '123-4-56789-0',
+    bankBranch: 'Bangkok HQ',
+    bankInstructions: 'Transfer the exact order total, then upload your payment slip on the order page. Orders ship after we verify payment.',
+  },
 ];
 
 async function main() {
@@ -169,9 +210,15 @@ async function main() {
     else await prisma.shippingMethod.create({ data: m });
   }
 
-  // Payment methods
+  // Payment methods. On re-seed we only refresh label/enabled so we don't clobber
+  // admin-edited bank info or API keys; bank placeholders are set on first create.
   for (const pm of PAYMENT_METHODS) {
-    await prisma.paymentMethodConfig.upsert({ where: { method: pm.method }, update: { label: pm.label, enabled: pm.enabled }, create: pm });
+    const { method, label, enabled, ...bank } = pm;
+    await prisma.paymentMethodConfig.upsert({
+      where: { method },
+      update: { label, enabled },
+      create: { method, label, enabled, ...bank },
+    });
   }
 
   // SMTP settings (single row), seeded from env

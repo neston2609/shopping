@@ -17,6 +17,8 @@ const env = {
     .split(',')
     .map((s) => s.trim())
     .filter(Boolean),
+  // Absolute base URL of the public site (used to build links in emails, e.g. payment slips).
+  publicUrl: process.env.PUBLIC_URL || (process.env.CLIENT_ORIGINS || 'http://localhost:5173').split(',')[0].trim(),
   jwtSecret: process.env.JWT_SECRET || 'dev-insecure-secret-change-me',
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '7d',
   encryptionKey: process.env.ENCRYPTION_KEY || '0'.repeat(64),

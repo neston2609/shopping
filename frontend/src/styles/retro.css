@@ -473,7 +473,9 @@ h1,h2,h3,h4,h5,.px{font-family:"Press Start 2P",monospace;letter-spacing:0.02em;
 .badge-status.shipped{border-color:var(--cyan);color:var(--cyan);}
 .badge-status.delivered{border-color:var(--lime);color:var(--lime);}
 .badge-status.cancelled{border-color:var(--magenta);color:var(--magenta);}
-.badge-status.pending{border-color:var(--gold);color:var(--gold);}
+.badge-status.pending,.badge-status.awaiting_payment{border-color:var(--gold);color:var(--gold);}
+.badge-status.payment_review{border-color:var(--epic);color:var(--epic);}
+.badge-status.awaiting_shipment{border-color:var(--lime);color:var(--lime);}
 
 .steps{display:flex;gap:10px;margin:18px 0;flex-wrap:wrap;}
 .steps .s{font-family:"Press Start 2P",monospace;font-size:9px;padding:8px 10px;border:2px solid var(--ink-dim);color:var(--ink-dim);}

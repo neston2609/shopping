@@ -18,7 +18,24 @@ const shippingMethods = asyncHandler(async (req, res) => {
 // GET /api/payment-methods  — enabled methods for checkout
 const paymentMethods = asyncHandler(async (req, res) => {
   const methods = await prisma.paymentMethodConfig.findMany({ where: { enabled: true }, orderBy: { id: 'asc' } });
-  res.json({ methods: methods.map((m) => ({ method: m.method, label: m.label })) });
+  res.json({
+    methods: methods.map((m) => ({
+      method: m.method,
+      label: m.label,
+      ...(m.method === 'bank_transfer'
+        ? {
+            bank: {
+              bankName: m.bankName,
+              bankAccountName: m.bankAccountName,
+              bankAccountNumber: m.bankAccountNumber,
+              bankBranch: m.bankBranch,
+              bankInstructions: m.bankInstructions,
+              qrImageUrl: m.qrImageUrl,
+            },
+          }
+        : {}),
+    })),
+  });
 });
 
 module.exports = { shippingMethods, paymentMethods };

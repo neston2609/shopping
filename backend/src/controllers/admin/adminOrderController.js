@@ -4,8 +4,8 @@ const { asyncHandler, notFound, badRequest } = require('../../utils/http');
 const { serialize } = require('../orderController');
 const { sendStatusEmail } = require('../../services/orderEmails');
 
-const ORDER_STATUSES = ['pending', 'paid', 'shipped', 'delivered', 'cancelled'];
-const PAYMENT_STATUSES = ['pending', 'paid', 'failed', 'refunded'];
+const ORDER_STATUSES = ['awaiting_payment', 'payment_review', 'awaiting_shipment', 'shipped', 'delivered', 'cancelled'];
+const PAYMENT_STATUSES = ['pending', 'submitted', 'paid', 'failed', 'refunded'];
 
 const statusSchema = z.object({ status: z.enum(ORDER_STATUSES) });
 const trackingSchema = z.object({ trackingNumber: z.string().min(1) });
@@ -52,10 +52,6 @@ const updateStatus = asyncHandler(async (req, res) => {
       }
     }
     await tx.order.update({ where: { id }, data: { status } });
-    // Keep payment in sync when marking paid.
-    if (status === 'paid') {
-      await tx.payment.updateMany({ where: { orderId: id }, data: { status: 'paid', paidAt: new Date() } });
-    }
   });
 
   const order = await prisma.order.findUnique({ where: { id }, include: { items: true, payment: true, shippingMethod: true } });
@@ -79,4 +75,22 @@ const updatePayment = asyncHandler(async (req, res) => {
   res.json({ ok: true });
 });
 
-module.exports = { list, getOne, updateStatus, setTracking, updatePayment, statusSchema, trackingSchema, paymentSchema };
+// PATCH /api/admin/orders/:id/approve-payment
+// Approve a (bank-transfer) payment: mark paid + move order to "awaiting_shipment".
+const approvePayment = asyncHandler(async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  const order = await prisma.order.findUnique({ where: { id }, include: { payment: true } });
+  if (!order) throw notFound('Order not found');
+  if (!order.payment) throw notFound('Payment not found');
+
+  await prisma.$transaction(async (tx) => {
+    await tx.payment.update({ where: { id: order.payment.id }, data: { status: 'paid', paidAt: new Date() } });
+    await tx.order.update({ where: { id }, data: { status: 'awaiting_shipment' } });
+  });
+
+  const fresh = await prisma.order.findUnique({ where: { id }, include: { items: true, payment: true, shippingMethod: true } });
+  await sendStatusEmail(fresh, 'awaiting_shipment'); // -> payment_confirmation email
+  res.json({ order: serialize(fresh) });
+});
+
+module.exports = { list, getOne, updateStatus, setTracking, updatePayment, approvePayment, statusSchema, trackingSchema, paymentSchema };

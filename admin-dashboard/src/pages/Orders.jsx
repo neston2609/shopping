@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
 
-const STATUSES = ['', 'pending', 'paid', 'shipped', 'delivered', 'cancelled'];
+const STATUSES = ['', 'awaiting_payment', 'payment_review', 'awaiting_shipment', 'shipped', 'delivered', 'cancelled'];
 
 function OrderModal({ id, onClose, onChanged }) {
   const [order, setOrder] = useState(null);
@@ -35,6 +35,12 @@ function OrderModal({ id, onClose, onChanged }) {
     onChanged();
     load();
   };
+  const approvePayment = async () => {
+    await api.patch(`/admin/orders/${id}/approve-payment`);
+    setMsg('Payment approved — order moved to awaiting shipment. Customer notified.');
+    onChanged();
+    load();
+  };
 
   return (
     <div className="modal-back" onClick={onClose}>
@@ -54,6 +60,17 @@ function OrderModal({ id, onClose, onChanged }) {
               <button className="btn btn--lime btn--sm" onClick={() => setPayment('paid')}>MARK PAID</button>
               <button className="btn btn--sm" onClick={() => setPayment('refunded')}>REFUND</button>
             </div>
+            {order.payment?.slipUrl && (
+              <div style={{ marginTop: 10 }}>
+                <div className="muted">Payment slip{order.payment.payerNote ? ` · note: ${order.payment.payerNote}` : ''}:</div>
+                <a href={order.payment.slipUrl} target="_blank" rel="noreferrer">
+                  <img src={order.payment.slipUrl} alt="slip" style={{ maxWidth: 220, border: '3px solid #fff', marginTop: 6 }} />
+                </a>
+              </div>
+            )}
+            {order.status === 'payment_review' && (
+              <button className="btn btn--lime btn--sm" style={{ marginTop: 10 }} onClick={approvePayment}>✓ APPROVE PAYMENT → AWAITING SHIPMENT</button>
+            )}
           </div>
         </div>
 

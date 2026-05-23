@@ -147,7 +147,8 @@ export default function Checkout() {
                 ))}
               </div>
               <div className="muted" style={{ marginTop: 12 }}>
-                Card / Stripe / PayPal are simulated in this build — orders are marked paid instantly. COD stays pending.
+                Bank transfer shows the bank account + QR on the next page, where you upload your payment slip.
+                Card / Stripe / PayPal are simulated (marked paid instantly). COD is collected on delivery.
               </div>
             </>
           )}

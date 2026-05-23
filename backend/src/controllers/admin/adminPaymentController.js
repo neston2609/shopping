@@ -1,13 +1,20 @@
 const { z } = require('zod');
 const prisma = require('../../lib/prisma');
-const { asyncHandler } = require('../../utils/http');
+const { asyncHandler, notFound, badRequest } = require('../../utils/http');
 const { encrypt, decrypt } = require('../../lib/crypto');
+const { publicPath } = require('../../lib/upload');
 
 const updateSchema = z.object({
   label: z.string().min(1).optional(),
   enabled: z.boolean().optional(),
   // arbitrary key->value map of API credentials (e.g. publishableKey, secretKey)
   config: z.record(z.string()).optional(),
+  // bank-transfer display info (public, shown to the customer)
+  bankName: z.string().optional(),
+  bankAccountName: z.string().optional(),
+  bankAccountNumber: z.string().optional(),
+  bankBranch: z.string().optional(),
+  bankInstructions: z.string().optional(),
 });
 
 function maskConfig(configEnc) {
@@ -26,22 +33,30 @@ function maskConfig(configEnc) {
   }
 }
 
+function publicMethod(m) {
+  return {
+    id: m.id,
+    method: m.method,
+    label: m.label,
+    enabled: m.enabled,
+    config: maskConfig(m.configEnc),
+    bankName: m.bankName || '',
+    bankAccountName: m.bankAccountName || '',
+    bankAccountNumber: m.bankAccountNumber || '',
+    bankBranch: m.bankBranch || '',
+    bankInstructions: m.bankInstructions || '',
+    qrImageUrl: m.qrImageUrl || null,
+  };
+}
+
 const list = asyncHandler(async (req, res) => {
   const methods = await prisma.paymentMethodConfig.findMany({ orderBy: { id: 'asc' } });
-  res.json({
-    methods: methods.map((m) => ({
-      id: m.id,
-      method: m.method,
-      label: m.label,
-      enabled: m.enabled,
-      config: maskConfig(m.configEnc),
-    })),
-  });
+  res.json({ methods: methods.map(publicMethod) });
 });
 
 const update = asyncHandler(async (req, res) => {
   const method = req.params.method;
-  const { label, enabled, config } = req.body;
+  const { label, enabled, config, bankName, bankAccountName, bankAccountNumber, bankBranch, bankInstructions } = req.body;
 
   const existing = await prisma.paymentMethodConfig.findUnique({ where: { method } });
 
@@ -56,17 +71,36 @@ const update = asyncHandler(async (req, res) => {
         current = {};
       }
     }
-    const merged = { ...current, ...config };
-    configEnc = encrypt(JSON.stringify(merged));
+    configEnc = encrypt(JSON.stringify({ ...current, ...config }));
   }
+
+  const bankPatch = {};
+  if (bankName !== undefined) bankPatch.bankName = bankName;
+  if (bankAccountName !== undefined) bankPatch.bankAccountName = bankAccountName;
+  if (bankAccountNumber !== undefined) bankPatch.bankAccountNumber = bankAccountNumber;
+  if (bankBranch !== undefined) bankPatch.bankBranch = bankBranch;
+  if (bankInstructions !== undefined) bankPatch.bankInstructions = bankInstructions;
 
   const saved = await prisma.paymentMethodConfig.upsert({
     where: { method },
-    update: { label: label ?? existing?.label, enabled: enabled ?? existing?.enabled, configEnc },
-    create: { method, label: label || method, enabled: enabled ?? false, configEnc },
+    update: { label: label ?? existing?.label, enabled: enabled ?? existing?.enabled, configEnc, ...bankPatch },
+    create: { method, label: label || method, enabled: enabled ?? false, configEnc, ...bankPatch },
   });
 
-  res.json({ method: { id: saved.id, method: saved.method, label: saved.label, enabled: saved.enabled, config: maskConfig(saved.configEnc) } });
+  res.json({ method: publicMethod(saved) });
 });
 
-module.exports = { list, update, updateSchema };
+// POST /api/admin/payments/:method/qr  — upload QR image (multipart "qr"); bank_transfer only.
+const uploadQr = asyncHandler(async (req, res) => {
+  const method = req.params.method;
+  if (!req.file) throw badRequest('QR image is required');
+  const qrImageUrl = publicPath('qr', req.file.filename);
+  const saved = await prisma.paymentMethodConfig.upsert({
+    where: { method },
+    update: { qrImageUrl },
+    create: { method, label: method, enabled: false, qrImageUrl },
+  });
+  res.json({ method: publicMethod(saved) });
+});
+
+module.exports = { list, update, uploadQr, updateSchema };

@@ -3,7 +3,7 @@ const { nanoid } = require('nanoid');
 const prisma = require('../lib/prisma');
 const { asyncHandler, badRequest, notFound } = require('../utils/http');
 const { getOrCreateCart, priceOf } = require('../services/cart');
-const { sendOrderConfirmation, sendStatusEmail } = require('../services/orderEmails');
+const { sendOrderConfirmation, sendStatusEmail, sendBankInstructions } = require('../services/orderEmails');
 
 const addressSchema = z.object({
   fullName: z.string().min(1),
@@ -20,7 +20,7 @@ const placeOrderSchema = z.object({
   email: z.string().email(),
   address: addressSchema,
   shippingMethodId: z.coerce.number().int().positive(),
-  paymentMethod: z.enum(['card', 'stripe', 'paypal', 'cod']),
+  paymentMethod: z.enum(['card', 'stripe', 'paypal', 'cod', 'bank_transfer']),
 });
 
 async function loadCartLines(cartId) {
@@ -76,9 +76,12 @@ const placeOrder = asyncHandler(async (req, res) => {
   }
 
   const orderNumber = `RC81-${nanoid(8).toUpperCase()}`;
-  // COD stays pending; simulated gateways mark as paid immediately.
-  const paymentPaid = paymentMethod !== 'cod';
-  const orderStatus = paymentPaid ? 'paid' : 'pending';
+  // Bank transfer waits for slip + approval; COD ships then collects; card/stripe/paypal
+  // are simulated as paid instantly.
+  const isBank = paymentMethod === 'bank_transfer';
+  const simulatedPaid = ['card', 'stripe', 'paypal'].includes(paymentMethod);
+  const orderStatus = isBank ? 'awaiting_payment' : 'awaiting_shipment';
+  const paymentStatus = simulatedPaid ? 'paid' : 'pending';
 
   const order = await prisma.$transaction(async (tx) => {
     const created = await tx.order.create({
@@ -115,10 +118,10 @@ const placeOrder = asyncHandler(async (req, res) => {
         payment: {
           create: {
             method: paymentMethod,
-            status: paymentPaid ? 'paid' : 'pending',
+            status: paymentStatus,
             amount: total,
-            transactionId: paymentPaid ? `SIM-${nanoid(10).toUpperCase()}` : null,
-            paidAt: paymentPaid ? new Date() : null,
+            transactionId: simulatedPaid ? `SIM-${nanoid(10).toUpperCase()}` : null,
+            paidAt: simulatedPaid ? new Date() : null,
           },
         },
       },
@@ -142,9 +145,11 @@ const placeOrder = asyncHandler(async (req, res) => {
     return created;
   });
 
-  // Fire emails (async queue) — confirmation always, payment confirmation if paid.
+  // Fire emails (async queue): order detail always; bank instructions for bank
+  // transfer; payment confirmation for instantly-paid methods.
   await sendOrderConfirmation(order);
-  if (paymentPaid) await sendStatusEmail(order, 'paid');
+  if (isBank) await sendBankInstructions(order);
+  else if (simulatedPaid) await sendStatusEmail(order, 'awaiting_shipment');
 
   res.status(201).json({
     order: {

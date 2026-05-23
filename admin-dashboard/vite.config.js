@@ -12,6 +12,10 @@ export default defineConfig({
         target: process.env.VITE_API_PROXY || 'http://localhost:9000',
         changeOrigin: true,
       },
+      '/uploads': {
+        target: process.env.VITE_API_PROXY || 'http://localhost:9000',
+        changeOrigin: true,
+      },
     },
   },
 });
