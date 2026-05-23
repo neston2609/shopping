@@ -16,7 +16,7 @@ export default function Dashboard() {
     <>
       <div className="toprow"><div className="h1">DASHBOARD</div></div>
       <div className="cards">
-        <div className="stat-card"><div className="k">REVENUE</div><div className="v">${stats.revenue.toFixed(0)}</div></div>
+        <div className="stat-card"><div className="k">REVENUE</div><div className="v">฿{stats.revenue.toFixed(0)}</div></div>
         <div className="stat-card"><div className="k">ORDERS</div><div className="v">{stats.orderCount}</div></div>
         <div className="stat-card"><div className="k">PRODUCTS</div><div className="v">{stats.productCount}</div></div>
         <div className="stat-card"><div className="k">CUSTOMERS</div><div className="v">{stats.customerCount}</div></div>
@@ -31,7 +31,7 @@ export default function Dashboard() {
               {stats.recentOrders.map((o) => (
                 <tr key={o.id}>
                   <td><Link to="/orders" style={{ color: 'var(--cyan)' }}>{o.orderNumber}</Link></td>
-                  <td>${o.total.toFixed(2)}</td>
+                  <td>฿{o.total.toFixed(2)}</td>
                   <td><span className={`badge ${o.status}`}>{o.status}</span></td>
                 </tr>
               ))}

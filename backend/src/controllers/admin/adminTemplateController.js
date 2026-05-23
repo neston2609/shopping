@@ -42,8 +42,8 @@ const preview = asyncHandler(async (req, res) => {
   const sample = {
     customer_name: 'Player_1',
     order_id: 'RC81-DEMO1234',
-    order_total: '$179.00',
-    order_items: '1x Crystal Quest: Lords of Aether — $179.00',
+    order_total: '฿179.00',
+    order_items: '1x Crystal Quest: Lords of Aether — ฿179.00',
     shipping_address: '123 Pixel Lane, Arcade City, CA 90001, USA',
     tracking_number: 'TRK-998877',
   };

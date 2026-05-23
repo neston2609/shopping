@@ -21,10 +21,10 @@ function Orders() {
             <div style={{ fontFamily: 'Press Start 2P', fontSize: 11, color: 'var(--gold)' }}>{o.orderNumber}</div>
             <span className={`badge-status ${o.status}`}>{o.status}</span>
           </div>
-          <div className="muted" style={{ marginTop: 10 }}>{new Date(o.createdAt).toLocaleString()} · {o.items.length} items · ${o.total.toFixed(2)}</div>
+          <div className="muted" style={{ marginTop: 10 }}>{new Date(o.createdAt).toLocaleString()} · {o.items.length} items · ฿{o.total.toFixed(2)}</div>
           {o.trackingNumber && <div className="muted" style={{ marginTop: 6 }}>Tracking: {o.trackingNumber}</div>}
           <div style={{ marginTop: 10 }}>
-            {o.items.map((i) => <div key={i.id} className="muted">{i.quantity}× {i.name} — ${i.lineTotal.toFixed(2)}</div>)}
+            {o.items.map((i) => <div key={i.id} className="muted">{i.quantity}× {i.name} — ฿{i.lineTotal.toFixed(2)}</div>)}
           </div>
         </div>
       ))}

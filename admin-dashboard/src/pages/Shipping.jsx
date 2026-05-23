@@ -33,7 +33,7 @@ export default function Shipping() {
             <tbody>
               {list.map((m) => (
                 <tr key={m.id}>
-                  <td>{m.name}</td><td>${m.fee.toFixed(2)}</td><td className="muted">{m.zone}</td><td className="muted">{m.estimate}</td>
+                  <td>{m.name}</td><td>฿{m.fee.toFixed(2)}</td><td className="muted">{m.zone}</td><td className="muted">{m.estimate}</td>
                   <td><span className={`badge ${m.enabled ? 'active' : 'inactive'}`} style={{ cursor: 'pointer' }} onClick={() => toggle(m)}>{m.enabled ? 'ON' : 'OFF'}</span></td>
                   <td className="row-actions"><button className="btn btn--cyan btn--sm" onClick={() => edit(m)}>EDIT</button><button className="btn btn--sm" onClick={() => remove(m.id)}>DEL</button></td>
                 </tr>

@@ -67,7 +67,7 @@ export default function Layout() {
           </div>
         </div>
         <div className="right">
-          <span className="pill">EN · USD</span>
+          <span className="pill">EN · THB</span>
           {user ? (
             <>
               {user.role === 'admin' && (
@@ -101,7 +101,7 @@ export default function Layout() {
         </form>
         <div className="headstats">
           <div className="coin" title="Your loot wallet">
-            <div className="c">$</div>
+            <div className="c">฿</div>
             <div className="v">{(user?.coins ?? 0).toLocaleString()}</div>
           </div>
           <Link className="cart" to="/cart">

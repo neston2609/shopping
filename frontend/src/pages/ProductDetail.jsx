@@ -63,8 +63,8 @@ export default function ProductDetail() {
 
         <div className="price-row">
           <div className="price">
-            {hasDiscount ? <span className="s">${product.price}</span> : null}
-            <span className="v">${hasDiscount ? product.discountPrice : product.price}</span>
+            {hasDiscount ? <span className="s">฿{product.price}</span> : null}
+            <span className="v">฿{hasDiscount ? product.discountPrice : product.price}</span>
           </div>
           <div className="stock">{product.stock > 0 ? `⬤ ${product.stock} IN STOCK` : '✕ SOLD OUT'}</div>
         </div>

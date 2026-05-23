@@ -162,7 +162,7 @@ export default function Products() {
               <tr key={p.id}>
                 <td>{p.name}</td>
                 <td className="muted">{p.sku}</td>
-                <td>${p.discountPrice ?? p.price}{p.discountPrice ? <span className="muted" style={{ textDecoration: 'line-through', marginLeft: 6 }}>${p.price}</span> : null}</td>
+                <td>฿{p.discountPrice ?? p.price}{p.discountPrice ? <span className="muted" style={{ textDecoration: 'line-through', marginLeft: 6 }}>฿{p.price}</span> : null}</td>
                 <td>{p.stock}</td>
                 <td><span className="badge">{p.rarity}</span></td>
                 <td><span className={`badge ${p.status}`}>{p.status}</span></td>

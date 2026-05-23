@@ -128,7 +128,7 @@ export default function Checkout() {
                   <label key={m.id} className={shippingMethodId === m.id ? 'on' : ''}>
                     <input type="radio" name="ship" checked={shippingMethodId === m.id} onChange={() => setShippingMethodId(m.id)} />
                     <span style={{ flex: 1 }}>{m.name} — {m.estimate} ({m.zone})</span>
-                    <b style={{ color: 'var(--gold)' }}>{cart.subtotal >= 50 ? 'FREE' : `$${m.fee.toFixed(2)}`}</b>
+                    <b style={{ color: 'var(--gold)' }}>{cart.subtotal >= 50 ? 'FREE' : `฿${m.fee.toFixed(2)}`}</b>
                   </label>
                 ))}
               </div>
@@ -178,11 +178,11 @@ export default function Checkout() {
         <div className="summary">
           <h3 style={{ fontFamily: 'Press Start 2P', fontSize: 12, color: 'var(--gold)' }}>// SUMMARY</h3>
           {cart.items.map((it) => (
-            <div className="line" key={it.id}><span>{it.quantity}× {it.name.slice(0, 22)}</span><span>${it.lineTotal.toFixed(2)}</span></div>
+            <div className="line" key={it.id}><span>{it.quantity}× {it.name.slice(0, 22)}</span><span>฿{it.lineTotal.toFixed(2)}</span></div>
           ))}
-          <div className="line"><span>Subtotal</span><span>${totals.subtotal.toFixed(2)}</span></div>
-          <div className="line"><span>Shipping</span><span>{totals.shippingFee === 0 ? 'FREE' : `$${totals.shippingFee.toFixed(2)}`}</span></div>
-          <div className="line total"><span>TOTAL</span><span>${totals.total.toFixed(2)}</span></div>
+          <div className="line"><span>Subtotal</span><span>฿{totals.subtotal.toFixed(2)}</span></div>
+          <div className="line"><span>Shipping</span><span>{totals.shippingFee === 0 ? 'FREE' : `฿${totals.shippingFee.toFixed(2)}`}</span></div>
+          <div className="line total"><span>TOTAL</span><span>฿{totals.total.toFixed(2)}</span></div>
         </div>
       </div>
     </div>

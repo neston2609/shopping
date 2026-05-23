@@ -15,7 +15,7 @@ function CustomerModal({ id, onClose }) {
           <thead><tr><th>Order</th><th>Items</th><th>Total</th><th>Status</th><th>Date</th></tr></thead>
           <tbody>
             {c.orders.map((o) => (
-              <tr key={o.id}><td>{o.orderNumber}</td><td>{o.itemCount}</td><td>${o.total.toFixed(2)}</td><td><span className={`badge ${o.status}`}>{o.status}</span></td><td className="muted">{new Date(o.createdAt).toLocaleDateString()}</td></tr>
+              <tr key={o.id}><td>{o.orderNumber}</td><td>{o.itemCount}</td><td>฿{o.total.toFixed(2)}</td><td><span className={`badge ${o.status}`}>{o.status}</span></td><td className="muted">{new Date(o.createdAt).toLocaleDateString()}</td></tr>
             ))}
             {!c.orders.length && <tr><td colSpan={5} className="muted">No orders.</td></tr>}
           </tbody>

@@ -89,7 +89,7 @@ Sign in with the seeded admin credentials.
 - Guest **and** logged-in cart (guest cart merges into the user cart on login)
 - 4-step checkout: address → shipping method → payment method → confirm
 - Customer accounts: register, login, profile, saved shipping addresses, order history
-- Free shipping over $50; pixel-coin loyalty (1 coin per $1 spent)
+- Free shipping over ฿50; pixel-coin loyalty (1 coin per ฿1 spent)
 
 ### Admin dashboard
 - Dashboard stats (revenue, orders, low-stock alerts, recent orders)

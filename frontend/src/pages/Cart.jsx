@@ -37,7 +37,7 @@ export default function Cart() {
                 <span style={{ fontFamily: 'Press Start 2P', fontSize: 11, minWidth: 22, textAlign: 'center' }}>{it.quantity}</span>
                 <button onClick={() => updateItem(it.id, it.quantity + 1)}>+</button>
               </div>
-              <div style={{ fontFamily: 'Press Start 2P', fontSize: 11, color: 'var(--gold)' }}>${it.lineTotal.toFixed(2)}</div>
+              <div style={{ fontFamily: 'Press Start 2P', fontSize: 11, color: 'var(--gold)' }}>฿{it.lineTotal.toFixed(2)}</div>
               <button className="chip" onClick={() => removeItem(it.id)}>✕</button>
             </div>
           ))}
@@ -45,10 +45,10 @@ export default function Cart() {
 
         <div className="summary">
           <h3 style={{ fontFamily: 'Press Start 2P', fontSize: 12, color: 'var(--gold)' }}>// ORDER SUMMARY</h3>
-          <div className="line"><span>Subtotal</span><span>${cart.subtotal.toFixed(2)}</span></div>
-          <div className="line"><span>Shipping (est.)</span><span>{shipping === 0 ? 'FREE' : `$${shipping.toFixed(2)}`}</span></div>
-          <div className="line total"><span>TOTAL</span><span>${(cart.subtotal + shipping).toFixed(2)}</span></div>
-          {cart.subtotal < 50 && <div className="muted" style={{ marginTop: 8 }}>Add ${(50 - cart.subtotal).toFixed(2)} for FREE shipping!</div>}
+          <div className="line"><span>Subtotal</span><span>฿{cart.subtotal.toFixed(2)}</span></div>
+          <div className="line"><span>Shipping (est.)</span><span>{shipping === 0 ? 'FREE' : `฿${shipping.toFixed(2)}`}</span></div>
+          <div className="line total"><span>TOTAL</span><span>฿{(cart.subtotal + shipping).toFixed(2)}</span></div>
+          {cart.subtotal < 50 && <div className="muted" style={{ marginTop: 8 }}>Add ฿{(50 - cart.subtotal).toFixed(2)} for FREE shipping!</div>}
           <Link className="btn btn--lime" to="/checkout" style={{ width: '100%', marginTop: 16 }}>▶ CHECKOUT</Link>
           <Link className="btn btn--ghost" to="/shop" style={{ width: '100%', marginTop: 10 }}>CONTINUE SHOPPING</Link>
         </div>

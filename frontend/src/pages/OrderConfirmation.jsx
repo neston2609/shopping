@@ -24,7 +24,7 @@ export default function OrderConfirmation() {
         {order && (
           <div style={{ marginTop: 16 }}>
             <span className={`badge-status ${order.status}`}>{order.status}</span>
-            {order.total != null && <div style={{ marginTop: 14, fontFamily: 'Press Start 2P', fontSize: 16, color: 'var(--lime)' }}>${Number(order.total).toFixed(2)}</div>}
+            {order.total != null && <div style={{ marginTop: 14, fontFamily: 'Press Start 2P', fontSize: 16, color: 'var(--lime)' }}>฿{Number(order.total).toFixed(2)}</div>}
           </div>
         )}
         <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginTop: 26 }}>

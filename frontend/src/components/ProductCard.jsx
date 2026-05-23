@@ -46,8 +46,8 @@ export default function ProductCard({ product }) {
       </div>
       <div className="footer">
         <div className="price">
-          {hasDiscount ? <span className="s">${product.price}</span> : null}
-          <span className="v">${hasDiscount ? product.discountPrice : product.price}</span>
+          {hasDiscount ? <span className="s">฿{product.price}</span> : null}
+          <span className="v">฿{hasDiscount ? product.discountPrice : product.price}</span>
         </div>
         <button className="add" onClick={onAdd} disabled={product.stock <= 0}>
           {product.stock <= 0 ? 'SOLD' : '+ ADD'}

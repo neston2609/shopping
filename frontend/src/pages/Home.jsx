@@ -4,7 +4,7 @@ import { api } from '../api/client';
 import ProductCard from '../components/ProductCard';
 import { useCart } from '../context/CartContext';
 
-const CHIPS = ['ALL', 'CONSOLES', 'CARTRIDGES', 'CONTROLLERS', 'ACCESSORIES', 'UNDER $50', 'RARE+'];
+const CHIPS = ['ALL', 'CONSOLES', 'CARTRIDGES', 'CONTROLLERS', 'ACCESSORIES', 'UNDER ฿50', 'RARE+'];
 
 function Hero() {
   return (
@@ -18,14 +18,14 @@ function Hero() {
             BUILT YOUR<br />
             <span className="gold">CHILDHOOD</span>.
           </h1>
-          <p>Hand-restored handhelds. Sealed cartridges. CRT-ready cables. Every drop comes with a 30-day reset button and free shipping past $50.</p>
+          <p>Hand-restored handhelds. Sealed cartridges. CRT-ready cables. Every drop comes with a 30-day reset button and free shipping past ฿50.</p>
           <div className="cta-row">
             <Link className="btn btn--lime" to="/shop">▶ ENTER SHOP</Link>
             <Link className="btn btn--ghost" to="/shop?sort=newest">VIEW NEW DROPS</Link>
             <span className="hint">PRESS <span className="kbd">A</span> TO BUY · <span className="kbd">B</span> TO BROWSE</span>
           </div>
           <div className="badges">
-            <span className="b bm">FREE SHIP $50+</span>
+            <span className="b bm">FREE SHIP ฿50+</span>
             <span className="b bc">30-DAY RESET</span>
             <span className="b bl">TESTED + WORKING</span>
             <span className="b bg">EARN COINS</span>
@@ -45,7 +45,7 @@ function Hero() {
               </div>
             </div>
             <div className="price">
-              <div><div className="label">PRICE</div><div><span className="strike">$229</span><span className="value">$179</span></div></div>
+              <div><div className="label">PRICE</div><div><span className="strike">฿229</span><span className="value">฿179</span></div></div>
               <div style={{ textAlign: 'right' }}><div className="label">STOCK</div><div className="value" style={{ color: 'var(--magenta)' }}>12/250</div></div>
             </div>
           </div>
@@ -58,7 +58,7 @@ function Hero() {
 function MarqueeRow() {
   const items = [
     '★ NEW DROP — CRYSTAL QUEST HANDHELD',
-    'FREE SHIPPING OVER $50',
+    'FREE SHIPPING OVER ฿50',
     '30-DAY RETURN POLICY',
     'SCAN QR FOR -10% FIRST QUEST',
     'NEW IN — NEON-64 GAMEPADS',
@@ -142,8 +142,8 @@ function BossDrop({ product }) {
         </div>
         <div className="price-row">
           <div className="price">
-            {hasDiscount ? <span className="s">${product.price}</span> : null}
-            <span className="v">${hasDiscount ? product.discountPrice : product.price}</span>
+            {hasDiscount ? <span className="s">฿{product.price}</span> : null}
+            <span className="v">฿{hasDiscount ? product.discountPrice : product.price}</span>
           </div>
           <div className="stock">⬤ {product.stock} LEFT</div>
         </div>
@@ -182,7 +182,7 @@ function DailyDeal({ deals }) {
     <div className="deal">
       <div className="panel">
         <span className="tag">⏱ DAILY QUEST · 24H ONLY</span>
-        <h2>BONUS STAGE:<br />SPEND $100, UNLOCK<br />A MYSTERY CARTRIDGE</h2>
+        <h2>BONUS STAGE:<br />SPEND ฿100, UNLOCK<br />A MYSTERY CARTRIDGE</h2>
         <div className="timer">
           <div className="t"><div className="n">02</div><div className="l">DAYS</div></div>
           <div className="t"><div className="n">14</div><div className="l">HRS</div></div>
@@ -210,8 +210,8 @@ function DailyDeal({ deals }) {
               <div className="art"><span>★ {(d.platform || d.name).split(' ')[0].toUpperCase()}</span></div>
               <div className="name">{d.name}</div>
               <div className="price">
-                {d.discountPrice ? <span className="s">${d.price}</span> : null}
-                <span className="v">${d.discountPrice || d.price}</span>
+                {d.discountPrice ? <span className="s">฿{d.price}</span> : null}
+                <span className="v">฿{d.discountPrice || d.price}</span>
               </div>
             </Link>
           );
@@ -229,7 +229,7 @@ function HowItWorks() {
       </h2>
       <div className="how-grid">
         <div className="step"><div className="n">1</div><h3>PICK YOUR LOOT</h3><p>Filter by platform, era or rarity. Every item is graded by our crew on a 1–10 scale and photographed front + back.</p><div className="icon">[ INVENTORY SCREEN ]</div></div>
-        <div className="step"><div className="n">2</div><h3>EARN PIXEL COINS</h3><p>Spend $1 = 1 coin. Coins stack across orders and unlock secret tier discounts at LVL 10, 25 and 50.</p><div className="icon">[ COIN WALLET ]</div></div>
+        <div className="step"><div className="n">2</div><h3>EARN PIXEL COINS</h3><p>Spend ฿1 = 1 coin. Coins stack across orders and unlock secret tier discounts at LVL 10, 25 and 50.</p><div className="icon">[ COIN WALLET ]</div></div>
         <div className="step"><div className="n">3</div><h3>SHIP + PLAY</h3><p>Foam-lined boxes, tracked shipping, 30-day reset button. Hit any issue and we'll respawn your order, no questions.</p><div className="icon">[ DELIVERY DRONE ]</div></div>
       </div>
     </div>

@@ -8,7 +8,7 @@ const STATUS_TEMPLATE = {
 };
 
 function money(n) {
-  return `$${Number(n).toFixed(2)}`;
+  return `฿${Number(n).toFixed(2)}`;
 }
 
 function buildVars(order) {

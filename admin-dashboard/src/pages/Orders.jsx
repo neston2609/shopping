@@ -60,10 +60,10 @@ function OrderModal({ id, onClose, onChanged }) {
         <table style={{ marginTop: 16 }}>
           <thead><tr><th>Item</th><th>Qty</th><th>Unit</th><th>Total</th></tr></thead>
           <tbody>
-            {order.items.map((i) => <tr key={i.id}><td>{i.name}</td><td>{i.quantity}</td><td>${i.unitPrice.toFixed(2)}</td><td>${i.lineTotal.toFixed(2)}</td></tr>)}
+            {order.items.map((i) => <tr key={i.id}><td>{i.name}</td><td>{i.quantity}</td><td>฿{i.unitPrice.toFixed(2)}</td><td>฿{i.lineTotal.toFixed(2)}</td></tr>)}
           </tbody>
         </table>
-        <div style={{ textAlign: 'right', marginTop: 10 }} className="px">TOTAL ${order.total.toFixed(2)}</div>
+        <div style={{ textAlign: 'right', marginTop: 10 }} className="px">TOTAL ฿{order.total.toFixed(2)}</div>
 
         <div className="grid2" style={{ marginTop: 16 }}>
           <div className="field"><label>ORDER STATUS</label>
@@ -110,7 +110,7 @@ export default function Orders() {
               <tr key={o.id}>
                 <td>{o.orderNumber}</td>
                 <td className="muted">{o.customerEmail}</td>
-                <td>${o.total.toFixed(2)}</td>
+                <td>฿{o.total.toFixed(2)}</td>
                 <td><span className={`badge ${o.payment?.status}`}>{o.payment?.status || '—'}</span></td>
                 <td><span className={`badge ${o.status}`}>{o.status}</span></td>
                 <td className="muted">{new Date(o.createdAt).toLocaleDateString()}</td>
