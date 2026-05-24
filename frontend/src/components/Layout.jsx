@@ -17,12 +17,14 @@ const NAV_FALLBACK = [
   { label: 'ACCESSORIES', sub: 'side gear', to: '/shop?category=accessories', key: 'cat:accessories' },
   { label: 'MERCH', sub: 'cosmetics', to: '/shop?category=apparel', key: 'cat:apparel' },
   { label: 'DEALS', sub: 'bonus stage', to: '/shop?sort=price_asc', key: 'deals' },
+  { label: 'DOWNLOADS', sub: 'files', to: '/downloads', key: 'downloads' },
   { label: 'SHOP', sub: 'all loot', to: '/shop', key: 'shop' },
 ];
 
 // Derive the single active nav key from the current location.
 function activeNavKey(pathname, searchStr) {
   if (pathname === '/') return 'home';
+  if (pathname.startsWith('/downloads')) return 'downloads';
   if (pathname.startsWith('/shop')) {
     const sp = new URLSearchParams(searchStr);
     const cat = sp.get('category');

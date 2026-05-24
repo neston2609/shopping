@@ -10,6 +10,7 @@ router.use('/', require('./storeConfig')); // /shipping-methods, /payment-method
 router.use('/cart', require('./cart'));
 router.use('/checkout', require('./checkout'));
 router.use('/orders', require('./orders'));
+router.use('/downloads', require('./downloads'));
 router.use('/account', require('./account'));
 router.use('/admin', require('./admin'));
 

@@ -36,9 +36,10 @@ model User {
   role         Role    @relation(fields: [roleId], references: [id])
   isActive     Boolean @default(true) @map("is_active")
 
-  addresses ShippingAddress[]
-  carts     Cart[]
-  orders    Order[]
+  addresses    ShippingAddress[]
+  carts        Cart[]
+  orders       Order[]
+  downloadLogs DownloadLog[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -355,4 +356,37 @@ model EmailLog {
   @@index([status])
   @@index([relatedOrderId])
   @@map("email_logs")
+}
+
+// ----------------------------------------------------------------------------
+// Downloads: SFTP source config + download audit log
+// ----------------------------------------------------------------------------
+
+model SftpSettings {
+  id          Int      @id @default(autoincrement())
+  host        String?
+  port        Int      @default(22)
+  username    String?
+  passwordEnc String?  @map("password_enc") // encrypted at rest
+  basePath    String   @default("/") @map("base_path")
+  enabled     Boolean  @default(false)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("sftp_settings")
+}
+
+model DownloadLog {
+  id        Int      @id @default(autoincrement())
+  userId    Int?     @map("user_id")
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  path      String
+  fileName  String   @map("file_name")
+  sizeBytes Int?     @map("size_bytes")
+  ip        String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("download_logs")
 }

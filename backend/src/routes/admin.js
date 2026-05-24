@@ -13,6 +13,7 @@ const payments = require('../controllers/admin/adminPaymentController');
 const smtp = require('../controllers/admin/adminSmtpController');
 const templates = require('../controllers/admin/adminTemplateController');
 const misc = require('../controllers/admin/adminMiscController');
+const sftp = require('../controllers/admin/adminSftpController');
 
 const router = express.Router();
 
@@ -64,6 +65,12 @@ router.get('/smtp', smtp.get);
 router.put('/smtp', validate(smtp.updateSchema), smtp.update);
 router.post('/smtp/test-connection', smtp.testConnection);
 router.post('/smtp/test-email', validate(smtp.testSchema), smtp.sendTestEmail);
+
+// SFTP downloads config
+router.get('/sftp', sftp.get);
+router.put('/sftp', validate(sftp.updateSchema), sftp.update);
+router.post('/sftp/test', sftp.test);
+router.get('/downloads/logs', sftp.listLogs);
 
 // Email templates
 router.get('/templates', templates.list);

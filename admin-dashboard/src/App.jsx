@@ -12,6 +12,7 @@ import Payments from './pages/Payments';
 import Smtp from './pages/Smtp';
 import Templates from './pages/Templates';
 import EmailLogs from './pages/EmailLogs';
+import Downloads from './pages/Downloads';
 
 export default function App() {
   return (
@@ -30,6 +31,7 @@ export default function App() {
             <Route path="/smtp" element={<Smtp />} />
             <Route path="/templates" element={<Templates />} />
             <Route path="/email-logs" element={<EmailLogs />} />
+            <Route path="/downloads" element={<Downloads />} />
           </Route>
         </Routes>
       </AuthProvider>

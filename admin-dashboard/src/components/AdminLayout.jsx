@@ -12,6 +12,7 @@ const LINKS = [
   ['/smtp', 'SMTP / EMAIL'],
   ['/templates', 'TEMPLATES'],
   ['/email-logs', 'EMAIL LOGS'],
+  ['/downloads', 'DOWNLOADS'],
 ];
 
 export default function AdminLayout() {
