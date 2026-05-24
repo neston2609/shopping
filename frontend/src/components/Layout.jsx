@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { Link, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
@@ -7,16 +7,31 @@ import { useCart } from '../context/CartContext';
 // Admin app lives at /admin/ behind nginx in prod; override for local dev.
 const ADMIN_URL = import.meta.env.VITE_ADMIN_URL || '/admin/';
 
+// `key` identifies which single item is active (NavLink can't tell these apart
+// because they all resolve to the same /shop path, ignoring the query string).
 const NAV_FALLBACK = [
-  { label: 'HOME', sub: 'main quest', to: '/' },
-  { label: 'CONSOLES', sub: 'level 1-99', to: '/shop?category=consoles' },
-  { label: 'GAMES', sub: 'cartridges', to: '/shop?category=games' },
-  { label: 'CONTROLLERS', sub: 'weapons', to: '/shop?category=controllers' },
-  { label: 'ACCESSORIES', sub: 'side gear', to: '/shop?category=accessories' },
-  { label: 'MERCH', sub: 'cosmetics', to: '/shop?category=apparel' },
-  { label: 'DEALS', sub: 'bonus stage', to: '/shop?sort=price_asc' },
-  { label: 'SHOP', sub: 'all loot', to: '/shop' },
+  { label: 'HOME', sub: 'main quest', to: '/', key: 'home' },
+  { label: 'CONSOLES', sub: 'level 1-99', to: '/shop?category=consoles', key: 'cat:consoles' },
+  { label: 'GAMES', sub: 'cartridges', to: '/shop?category=games', key: 'cat:games' },
+  { label: 'CONTROLLERS', sub: 'weapons', to: '/shop?category=controllers', key: 'cat:controllers' },
+  { label: 'ACCESSORIES', sub: 'side gear', to: '/shop?category=accessories', key: 'cat:accessories' },
+  { label: 'MERCH', sub: 'cosmetics', to: '/shop?category=apparel', key: 'cat:apparel' },
+  { label: 'DEALS', sub: 'bonus stage', to: '/shop?sort=price_asc', key: 'deals' },
+  { label: 'SHOP', sub: 'all loot', to: '/shop', key: 'shop' },
 ];
+
+// Derive the single active nav key from the current location.
+function activeNavKey(pathname, searchStr) {
+  if (pathname === '/') return 'home';
+  if (pathname.startsWith('/shop')) {
+    const sp = new URLSearchParams(searchStr);
+    const cat = sp.get('category');
+    if (cat) return `cat:${cat}`;
+    if (sp.get('sort') === 'price_asc') return 'deals';
+    return 'shop';
+  }
+  return null;
+}
 
 function Logo() {
   return (
@@ -48,7 +63,9 @@ export default function Layout() {
   const { user, logout } = useAuth();
   const { cart } = useCart();
   const navigate = useNavigate();
+  const location = useLocation();
   const [search, setSearch] = useState('');
+  const activeKey = activeNavKey(location.pathname, location.search);
 
   const submitSearch = (e) => {
     e.preventDefault();
@@ -114,10 +131,10 @@ export default function Layout() {
       {/* NAV */}
       <div className="nav">
         {NAV_FALLBACK.map((n) => (
-          <NavLink key={n.label} to={n.to} end={n.to === '/'} className={({ isActive }) => (isActive ? 'active' : '')}>
+          <Link key={n.label} to={n.to} className={n.key === activeKey ? 'active' : ''}>
             {n.label}
             <span>{n.sub}</span>
-          </NavLink>
+          </Link>
         ))}
       </div>
 
