@@ -55,25 +55,21 @@ function Hero() {
   );
 }
 
-function MarqueeRow() {
+function UspStrip() {
   const items = [
-    '★ NEW DROP — CRYSTAL QUEST HANDHELD',
-    'FREE SHIPPING OVER ฿50',
-    '30-DAY RETURN POLICY',
-    'SCAN QR FOR -10% FIRST QUEST',
-    'NEW IN — NEON-64 GAMEPADS',
+    { ic: '✈', t: 'FREE SHIPPING', s: 'on orders over ฿50' },
+    { ic: '↺', t: '30-DAY RESET', s: 'return any quest' },
+    { ic: '✓', t: 'TESTED & WORKING', s: 'graded by humans' },
+    { ic: '$', t: 'EARN PIXEL COINS', s: '฿1 spent = 1 coin' },
   ];
-  const doubled = [...items, ...items];
   return (
-    <div className="marquee-row">
-      <div className="track">
-        {doubled.map((t, i) => (
-          <span key={i}>
-            {t}
-            <span className="sep"> ● </span>
-          </span>
-        ))}
-      </div>
+    <div className="usp">
+      {items.map((u) => (
+        <div className="u" key={u.t}>
+          <div className="ic">{u.ic}</div>
+          <div className="t">{u.t}<small>{u.s}</small></div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -278,7 +274,7 @@ export default function Home() {
   return (
     <>
       <Hero />
-      <MarqueeRow />
+      <UspStrip />
       {categories.length > 0 && <Categories categories={categories} />}
 
       <div className="section" id="shop">

@@ -74,8 +74,6 @@ export default function Layout() {
 
   return (
     <div className="page">
-      <div className="crt" aria-hidden="true" />
-
       {/* TOPBAR */}
       <div className="topbar">
         <div className="left">
@@ -113,7 +111,6 @@ export default function Layout() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
-          <div className="caret" />
           <button className="go" type="submit">ENTER</button>
         </form>
         <div className="headstats">
