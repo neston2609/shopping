@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
-import { api } from '../api';
+import { api, getToken } from '../api';
 
 const BLANK = {
   name: '', sku: '', description: '', price: '', discountPrice: '', shippingFee: '', stock: 0,
-  status: 'active', rarity: 'common', platform: '', artVariant: 'cart-mag', categoryId: '',
+  status: 'active', rarity: 'common', platform: '', artVariant: 'cart-mag', youtubeUrl: '', categoryId: '',
   images: [], attributes: [],
 };
 const ART_VARIANTS = ['cart-mag', 'cart-cyn', 'cart-lim', 'cart-gld', 'cart-pur', 'cart-org'];
@@ -55,6 +55,7 @@ function ProductForm({ initial, categories, onClose, onSaved }) {
       rarity: form.rarity,
       platform: form.platform || undefined,
       artVariant: form.artVariant || undefined,
+      youtubeUrl: form.youtubeUrl || '',
       categoryId: form.categoryId ? Number(form.categoryId) : null,
       images: form.images.filter((i) => i.url),
       attributes: form.attributes.filter((a) => a.name && a.value),
@@ -101,16 +102,50 @@ function ProductForm({ initial, categories, onClose, onSaved }) {
           <div className="field"><label>ART VARIANT</label><select value={form.artVariant} onChange={set('artVariant')}>{ART_VARIANTS.map((v) => <option key={v}>{v}</option>)}</select></div>
         </div>
         <div className="field"><label>PLATFORM TEXT</label><input value={form.platform} onChange={set('platform')} placeholder="SEGA-16 / 1992 / SEALED" /></div>
+        <div className="field"><label>YOUTUBE URL (optional)</label><input value={form.youtubeUrl} onChange={set('youtubeUrl')} placeholder="https://youtu.be/… or https://youtube.com/watch?v=…" /></div>
 
         <div className="field">
-          <label>IMAGE URLS</label>
+          <label>IMAGES</label>
           {form.images.map((img, i) => (
-            <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 6 }}>
-              <input style={{ flex: 1 }} value={img.url} onChange={(e) => setImg(i, e.target.value)} placeholder="https://…" />
+            <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 6, alignItems: 'center' }}>
+              {img.url && img.url.startsWith('/') ? <img src={img.url} alt="" style={{ width: 50, height: 50, objectFit: 'cover', border: '2px solid #fff' }} /> : null}
+              <input style={{ flex: 1 }} value={img.url} onChange={(e) => setImg(i, e.target.value)} placeholder="paste URL or upload below" />
               <button type="button" className="btn btn--ghost btn--sm" onClick={() => removeImg(i)}>✕</button>
             </div>
           ))}
-          <button type="button" className="btn btn--cyan btn--sm" onClick={addImg}>+ ADD IMAGE</button>
+          <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
+            <button type="button" className="btn btn--cyan btn--sm" onClick={addImg}>+ ADD URL</button>
+            {initial?.id && (
+              <label className="btn btn--lime btn--sm" style={{ display: 'inline-flex', cursor: 'pointer' }}>
+                + UPLOAD FILE
+                <input
+                  type="file"
+                  accept="image/*"
+                  style={{ display: 'none' }}
+                  onChange={async (e) => {
+                    const f = e.target.files[0];
+                    if (!f) return;
+                    const fd = new FormData();
+                    fd.append('image', f);
+                    const res = await fetch(`/api/admin/products/${initial.id}/images`, {
+                      method: 'POST',
+                      headers: { Authorization: `Bearer ${getToken()}` },
+                      body: fd,
+                      credentials: 'include',
+                    });
+                    const d = await res.json();
+                    if (res.ok && d.product) {
+                      setForm((s) => ({ ...s, images: d.product.images.map((i) => ({ url: i.url, alt: i.alt || '', position: i.position || 0 })) }));
+                    } else {
+                      setError(d.error || 'Upload failed');
+                    }
+                    e.target.value = '';
+                  }}
+                />
+              </label>
+            )}
+          </div>
+          {!initial?.id && <div className="muted" style={{ marginTop: 6 }}>Save the product first to enable image upload.</div>}
         </div>
 
         <div className="field">

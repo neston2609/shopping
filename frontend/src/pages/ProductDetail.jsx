@@ -4,11 +4,26 @@ import { api } from '../api/client';
 import ProductArt from '../components/ProductArt';
 import { useCart } from '../context/CartContext';
 
+// Extract a YouTube video id from a watch / short / embed URL.
+function youtubeId(url) {
+  if (!url) return null;
+  try {
+    const u = new URL(url);
+    if (u.hostname === 'youtu.be') return u.pathname.slice(1).split('/')[0];
+    if (u.searchParams.get('v')) return u.searchParams.get('v');
+    const m = u.pathname.match(/\/(embed|shorts)\/([^/?#]+)/);
+    if (m) return m[2];
+  } catch (e) { /* */ }
+  return null;
+}
+
 export default function ProductDetail() {
   const { slug } = useParams();
   const { addItem } = useCart();
   const [product, setProduct] = useState(null);
   const [qty, setQty] = useState(1);
+  const [activeImage, setActiveImage] = useState(0);
+  const [showVideo, setShowVideo] = useState(false);
   const [added, setAdded] = useState(false);
   const [error, setError] = useState('');
 
@@ -29,18 +44,51 @@ export default function ProductDetail() {
     setTimeout(() => setAdded(false), 2000);
   };
 
+  const ytId = youtubeId(product.youtubeUrl);
+  const images = product.images || [];
+
   return (
     <div className="boss" style={{ borderTop: 'none' }}>
       <div className="display">
-        <div className={`frame ${artClass}`} style={{ display: 'grid', placeItems: 'center' }}>
-          <ProductArt product={product} />
-          <div className="corners"><i /><i /><i /><i /></div>
+        <div className={`frame ${artClass}`} style={{ display: 'grid', placeItems: 'center', overflow: 'hidden' }}>
+          {showVideo && ytId ? (
+            <iframe
+              title="Product video"
+              src={`https://www.youtube.com/embed/${ytId}?autoplay=1`}
+              style={{ width: '100%', height: '100%', border: 0 }}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            />
+          ) : images.length > 0 ? (
+            <img src={images[activeImage]?.url} alt={images[activeImage]?.alt || product.name} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+          ) : (
+            <>
+              <ProductArt product={product} />
+              <div className="corners"><i /><i /><i /><i /></div>
+            </>
+          )}
         </div>
         <div className="thumbs">
-          {(product.images.length ? product.images : [{ id: 0 }, { id: 1 }, { id: 2 }, { id: 3 }]).slice(0, 4).map((img, i) => (
-            <div key={i} className={`thumb ${i === 0 ? 'on' : ''}`}>{['FRONT', 'BACK', 'BOX', 'PADS'][i]}</div>
+          {(images.length ? images : [null, null, null, null]).slice(0, 4).map((img, i) => (
+            <div
+              key={img?.id ?? i}
+              className={`thumb ${!showVideo && activeImage === i ? 'on' : ''}`}
+              onClick={() => { setActiveImage(i); setShowVideo(false); }}
+              style={img ? { backgroundImage: `url(${img.url})`, backgroundSize: 'cover', backgroundPosition: 'center', cursor: 'pointer' } : { cursor: img ? 'pointer' : 'default' }}
+            >
+              {!img && ['FRONT', 'BACK', 'BOX', 'PADS'][i]}
+            </div>
           ))}
         </div>
+        {ytId && (
+          <button
+            className="btn btn--magenta"
+            style={{ background: 'var(--magenta)', color: '#fff', width: '100%', marginTop: 10 }}
+            onClick={() => setShowVideo((v) => !v)}
+          >
+            {showVideo ? '◀ BACK TO IMAGES' : '▶ WATCH VIDEO'}
+          </button>
+        )}
       </div>
 
       <div className="info">

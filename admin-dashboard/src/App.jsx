@@ -14,6 +14,7 @@ import Templates from './pages/Templates';
 import EmailLogs from './pages/EmailLogs';
 import Downloads from './pages/Downloads';
 import Account from './pages/Account';
+import Discounts from './pages/Discounts';
 
 export default function App() {
   return (
@@ -34,6 +35,7 @@ export default function App() {
             <Route path="/email-logs" element={<EmailLogs />} />
             <Route path="/downloads" element={<Downloads />} />
             <Route path="/account" element={<Account />} />
+            <Route path="/discounts" element={<Discounts />} />
           </Route>
         </Routes>
       </AuthProvider>

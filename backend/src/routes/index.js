@@ -11,6 +11,12 @@ router.use('/cart', require('./cart'));
 router.use('/checkout', require('./checkout'));
 router.use('/orders', require('./orders'));
 router.use('/downloads', require('./downloads'));
+
+// Discount validate (optionally auth — works for guests too)
+const { optionalAuth } = require('../middleware/auth');
+const { validate } = require('../middleware/validate');
+const discountCtrl = require('../controllers/discountController');
+router.post('/discount/validate', optionalAuth, validate(discountCtrl.validateSchema), discountCtrl.validate);
 router.use('/account', require('./account'));
 router.use('/admin', require('./admin'));
 

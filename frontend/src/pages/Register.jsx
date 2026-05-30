@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 export default function Register() {
   const { register } = useAuth();
   const navigate = useNavigate();
-  const [form, setForm] = useState({ firstName: '', lastName: '', email: '', username: '', password: '' });
+  const [form, setForm] = useState({ firstName: '', lastName: '', email: '', username: '', password: '', confirmPassword: '' });
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -14,9 +14,14 @@ export default function Register() {
   const submit = async (e) => {
     e.preventDefault();
     setError('');
+    if (form.password !== form.confirmPassword) {
+      setError('Passwords do not match');
+      return;
+    }
     setBusy(true);
     try {
-      await register(form);
+      const { confirmPassword, ...payload } = form;
+      await register(payload);
       navigate('/account');
     } catch (err) {
       setError(err.details ? `${err.message}: ${err.details.map((d) => d.message).join(', ')}` : err.message);
@@ -36,7 +41,8 @@ export default function Register() {
           <div className="field"><label>LAST NAME</label><input value={form.lastName} onChange={set('lastName')} /></div>
           <div className="field"><label>EMAIL *</label><input type="email" value={form.email} onChange={set('email')} required /></div>
           <div className="field"><label>USERNAME (optional — 3-30 chars, letters/numbers/_)</label><input value={form.username} onChange={set('username')} /></div>
-          <div className="field"><label>PASSWORD * (min 8 chars)</label><input type="password" value={form.password} onChange={set('password')} required /></div>
+          <div className="field"><label>PASSWORD * (min 8 chars)</label><input type="password" value={form.password} onChange={set('password')} required autoComplete="new-password" /></div>
+          <div className="field"><label>CONFIRM PASSWORD *</label><input type="password" value={form.confirmPassword} onChange={set('confirmPassword')} required autoComplete="new-password" /></div>
           <button className="btn btn--lime" style={{ width: '100%', marginTop: 18 }} disabled={busy}>{busy ? 'CREATING…' : '▶ CREATE ACCOUNT'}</button>
         </form>
         <div className="muted" style={{ marginTop: 16 }}>Already a player? <Link to="/login" style={{ color: 'var(--lime)' }}>Continue game →</Link></div>

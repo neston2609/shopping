@@ -11,6 +11,7 @@ function ensureDir(p) {
 ensureDir(path.join(UPLOAD_ROOT, 'qr'));
 ensureDir(path.join(UPLOAD_ROOT, 'slips'));
 ensureDir(path.join(UPLOAD_ROOT, 'categories'));
+ensureDir(path.join(UPLOAD_ROOT, 'products'));
 
 function makeUploader(subdir) {
   const storage = multer.diskStorage({
@@ -37,6 +38,7 @@ module.exports = {
   qrUpload: makeUploader('qr'),
   slipUpload: makeUploader('slips'),
   categoryImageUpload: makeUploader('categories'),
+  productImageUpload: makeUploader('products'),
   UPLOAD_ROOT,
   publicPath,
 };

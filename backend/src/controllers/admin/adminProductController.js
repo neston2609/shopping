@@ -1,7 +1,8 @@
 const { z } = require('zod');
 const prisma = require('../../lib/prisma');
-const { asyncHandler, notFound } = require('../../utils/http');
+const { asyncHandler, notFound, badRequest } = require('../../utils/http');
 const { serialize } = require('../productController');
+const { publicPath } = require('../../lib/upload');
 
 function slugify(s) {
   return s
@@ -27,6 +28,7 @@ const upsertSchema = z.object({
   rarity: z.enum(['common', 'rare', 'epic', 'legendary']).default('common'),
   platform: z.string().optional(),
   artVariant: z.string().optional(),
+  youtubeUrl: z.string().optional().or(z.literal('')),
   categoryId: z.coerce.number().int().positive().nullable().optional(),
   images: z.array(imageSchema).optional(),
   attributes: z.array(attrSchema).optional(),
@@ -73,6 +75,7 @@ const create = asyncHandler(async (req, res) => {
       rarity: data.rarity,
       platform: data.platform,
       artVariant: data.artVariant,
+      youtubeUrl: data.youtubeUrl || null,
       categoryId: data.categoryId ?? null,
       images: data.images ? { create: data.images } : undefined,
       attributes: data.attributes ? { create: data.attributes } : undefined,
@@ -110,6 +113,7 @@ const update = asyncHandler(async (req, res) => {
         rarity: data.rarity,
         platform: data.platform,
         artVariant: data.artVariant,
+        youtubeUrl: data.youtubeUrl || null,
         categoryId: data.categoryId ?? null,
         images: data.images ? { create: data.images } : undefined,
         attributes: data.attributes ? { create: data.attributes } : undefined,
@@ -120,10 +124,36 @@ const update = asyncHandler(async (req, res) => {
   res.json({ product: serialize(product) });
 });
 
+// POST /api/admin/products/:id/images  — multipart "image", appends a new image
+const uploadImage = asyncHandler(async (req, res) => {
+  if (!req.file) throw badRequest('Image is required');
+  const id = parseInt(req.params.id, 10);
+  const count = await prisma.productImage.count({ where: { productId: id } });
+  const url = publicPath('products', req.file.filename);
+  await prisma.productImage.create({ data: { productId: id, url, position: count } });
+  const product = await prisma.product.findUnique({
+    where: { id },
+    include: { category: true, images: { orderBy: { position: 'asc' } }, attributes: true },
+  });
+  res.json({ product: serialize(product) });
+});
+
+// DELETE /api/admin/products/:id/images/:imageId
+const removeImage = asyncHandler(async (req, res) => {
+  const productId = parseInt(req.params.id, 10);
+  const imageId = parseInt(req.params.imageId, 10);
+  await prisma.productImage.delete({ where: { id: imageId } });
+  const product = await prisma.product.findUnique({
+    where: { id: productId },
+    include: { category: true, images: { orderBy: { position: 'asc' } }, attributes: true },
+  });
+  res.json({ product: serialize(product) });
+});
+
 const remove = asyncHandler(async (req, res) => {
   const id = parseInt(req.params.id, 10);
   await prisma.product.delete({ where: { id } });
   res.json({ ok: true });
 });
 
-module.exports = { list, getOne, create, update, remove, upsertSchema, slugify };
+module.exports = { list, getOne, create, update, remove, uploadImage, removeImage, upsertSchema, slugify };

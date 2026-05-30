@@ -4,6 +4,7 @@ const prisma = require('../lib/prisma');
 const { asyncHandler, badRequest, notFound } = require('../utils/http');
 const { getOrCreateCart, priceOf } = require('../services/cart');
 const { sendOrderConfirmation, sendStatusEmail, sendBankInstructions } = require('../services/orderEmails');
+const { validateAndCompute, recordRedemption } = require('../services/discount');
 
 const addressSchema = z.object({
   fullName: z.string().min(1),
@@ -21,6 +22,7 @@ const placeOrderSchema = z.object({
   address: addressSchema,
   shippingMethodId: z.coerce.number().int().positive(),
   paymentMethod: z.enum(['card', 'stripe', 'paypal', 'cod', 'bank_transfer']),
+  discountCode: z.string().optional().or(z.literal('')),
 });
 
 async function loadCartLines(cartId) {
@@ -28,7 +30,7 @@ async function loadCartLines(cartId) {
   return items;
 }
 
-async function computeTotals(cartId, shippingMethodId) {
+async function computeTotals(cartId, shippingMethodId, discountCode, userId) {
   const items = await loadCartLines(cartId);
   const subtotal = items.reduce((s, it) => s + priceOf(it.product) * it.quantity, 0);
 
@@ -56,11 +58,23 @@ async function computeTotals(cartId, shippingMethodId) {
     shippingFee = 0;
   }
 
-  const total = subtotal + shippingFee;
+  // Discount code (validated against the subtotal). Throws ApiError on failure.
+  let discount = 0;
+  let discountCodeRow = null;
+  if (discountCode && discountCode.trim()) {
+    const r = await validateAndCompute(discountCode.trim(), subtotal, userId || null);
+    discountCodeRow = r.code;
+    discount = r.amount;
+  }
+
+  const total = Math.max(0, subtotal - discount) + shippingFee;
   return {
     items,
     subtotal: +subtotal.toFixed(2),
     shippingFee: +shippingFee.toFixed(2),
+    discount: +discount.toFixed(2),
+    discountCode: discountCodeRow ? discountCodeRow.code : null,
+    discountCodeId: discountCodeRow ? discountCodeRow.id : null,
     total: +total.toFixed(2),
     shippingMethod,
   };
@@ -70,16 +84,24 @@ async function computeTotals(cartId, shippingMethodId) {
 const calculateTotals = asyncHandler(async (req, res) => {
   const cart = await getOrCreateCart(req, res);
   const shippingMethodId = req.body?.shippingMethodId ? Number(req.body.shippingMethodId) : null;
-  const { subtotal, shippingFee, total } = await computeTotals(cart.id, shippingMethodId);
-  res.json({ subtotal, shippingFee, total, freeShippingThreshold: 50 });
+  const discountCode = req.body?.discountCode || '';
+  try {
+    const { subtotal, shippingFee, discount, discountCode: code, total } = await computeTotals(cart.id, shippingMethodId, discountCode, req.user?.id);
+    res.json({ subtotal, shippingFee, discount, discountCode: code, total });
+  } catch (e) {
+    // Surface discount validation errors with their message
+    if (e.status) return res.status(e.status).json({ error: e.message });
+    throw e;
+  }
 });
 
 // POST /api/checkout
 const placeOrder = asyncHandler(async (req, res) => {
-  const { email, address, shippingMethodId, paymentMethod } = req.body;
+  const { email, address, shippingMethodId, paymentMethod, discountCode } = req.body;
   const cart = await getOrCreateCart(req, res);
 
-  const { items, subtotal, shippingFee, total, shippingMethod } = await computeTotals(cart.id, shippingMethodId);
+  const { items, subtotal, shippingFee, discount, discountCode: code, discountCodeId, total, shippingMethod } =
+    await computeTotals(cart.id, shippingMethodId, discountCode || '', req.user?.id);
   if (items.length === 0) throw badRequest('Your bag is empty');
 
   // Verify payment method is enabled
@@ -109,6 +131,8 @@ const placeOrder = asyncHandler(async (req, res) => {
         status: orderStatus,
         subtotal,
         shippingFee,
+        discountCode: code || null,
+        discountAmount: discount || 0,
         total,
         shippingMethodId: shippingMethod?.id || null,
         shipName: address.fullName,
@@ -161,6 +185,11 @@ const placeOrder = asyncHandler(async (req, res) => {
 
     return created;
   });
+
+  // Record discount redemption + increment usedCount
+  if (discountCodeId && discount > 0) {
+    await recordRedemption(discountCodeId, req.user?.id || null, order.id, discount);
+  }
 
   // Fire emails (async queue): order detail always; bank instructions for bank
   // transfer; payment confirmation for instantly-paid methods.

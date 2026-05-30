@@ -78,6 +78,19 @@ const TEMPLATES = [
       <p>After paying, upload your payment slip on your order page so we can verify and ship.</p>`),
   },
   {
+    key: 'welcome_discount',
+    name: 'Welcome Discount',
+    subject: 'Your welcome discount — {{discount_value}} off your first quest',
+    body: shell('Welcome to RC81', `<p>Hi {{customer_name}},</p>
+      <p>Welcome to RETROCONSOLE 1981! As thanks for joining, here is your welcome discount:</p>
+      <div style="border:3px dashed #ffcb3c;padding:18px;margin:14px 0;text-align:center">
+        <div style="font-family:'Courier New',monospace;font-size:20px;color:#a3ff3c;letter-spacing:3px">{{discount_code}}</div>
+        <div style="margin-top:6px">{{discount_value}} off · min order {{discount_min}}</div>
+        <div style="margin-top:6px;color:#b9a8e0">Valid until {{discount_expiry}}</div>
+      </div>
+      <p>Apply it on the checkout page.</p>`),
+  },
+  {
     key: 'admin_payment_review',
     name: 'Admin — Payment Slip Uploaded',
     subject: 'Payment slip uploaded — Order {{order_id}}',

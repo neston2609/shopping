@@ -15,9 +15,12 @@ export default function Checkout() {
   const [shippingMethods, setShippingMethods] = useState([]);
   const [paymentMethods, setPaymentMethods] = useState([]);
   const [freeShipping, setFreeShipping] = useState({ enabled: false, threshold: 0 });
-  const [totals, setTotals] = useState({ subtotal: cart.subtotal, shippingFee: 0, total: cart.subtotal });
+  const [totals, setTotals] = useState({ subtotal: cart.subtotal, shippingFee: 0, discount: 0, total: cart.subtotal });
   const [error, setError] = useState('');
   const [placing, setPlacing] = useState(false);
+  const [discountInput, setDiscountInput] = useState('');
+  const [discountCode, setDiscountCode] = useState('');
+  const [discountMsg, setDiscountMsg] = useState(null);
 
   const [form, setForm] = useState({
     email: user?.email || '',
@@ -47,9 +50,38 @@ export default function Checkout() {
 
   useEffect(() => {
     if (shippingMethodId) {
-      api.post('/checkout/totals', { shippingMethodId }).then(setTotals).catch(() => {});
+      api.post('/checkout/totals', { shippingMethodId, discountCode })
+        .then(setTotals)
+        .catch((e) => {
+          // If the code became invalid (subtotal changed below min, expired, etc.)
+          // drop it and recompute without it.
+          if (discountCode) {
+            setDiscountCode('');
+            setDiscountMsg({ ok: false, text: e.message });
+            api.post('/checkout/totals', { shippingMethodId }).then(setTotals).catch(() => {});
+          }
+        });
     }
-  }, [shippingMethodId, cart.subtotal]);
+  }, [shippingMethodId, cart.subtotal, discountCode]);
+
+  const applyDiscount = async (e) => {
+    e?.preventDefault();
+    setDiscountMsg(null);
+    if (!discountInput.trim()) return;
+    try {
+      const r = await api.post('/discount/validate', { code: discountInput.trim(), subtotal: cart.subtotal });
+      setDiscountCode(r.code);
+      setDiscountInput('');
+      setDiscountMsg({ ok: true, text: `Code ${r.code} applied — saves ฿${r.discount.toFixed(2)}` });
+    } catch (err) {
+      setDiscountMsg({ ok: false, text: err.message });
+    }
+  };
+
+  const clearDiscount = () => {
+    setDiscountCode('');
+    setDiscountMsg(null);
+  };
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
@@ -82,6 +114,7 @@ export default function Checkout() {
         },
         shippingMethodId,
         paymentMethod,
+        discountCode: discountCode || undefined,
       });
       await reload();
       navigate(`/order-confirmation/${order.orderNumber}`, { state: { order } });
@@ -185,7 +218,24 @@ export default function Checkout() {
           ))}
           <div className="line"><span>Subtotal</span><span>฿{totals.subtotal.toFixed(2)}</span></div>
           <div className="line"><span>Shipping</span><span>{totals.shippingFee === 0 ? 'FREE' : `฿${totals.shippingFee.toFixed(2)}`}</span></div>
+          {totals.discount > 0 && (
+            <div className="line" style={{ color: 'var(--lime)' }}>
+              <span>Discount ({discountCode})<button type="button" className="chip" style={{ marginLeft: 8, padding: '3px 6px', fontSize: 8 }} onClick={clearDiscount}>✕</button></span>
+              <span>−฿{totals.discount.toFixed(2)}</span>
+            </div>
+          )}
           <div className="line total"><span>TOTAL</span><span>฿{totals.total.toFixed(2)}</span></div>
+
+          {!discountCode && (
+            <form onSubmit={applyDiscount} style={{ marginTop: 14 }}>
+              <div className="muted" style={{ marginBottom: 6 }}>Have a discount code?</div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input style={{ flex: 1, padding: 10, background: 'var(--dark)', border: '2px solid var(--ink)', color: 'var(--ink)' }} value={discountInput} onChange={(e) => setDiscountInput(e.target.value)} placeholder="WELCOME-XXXXX" />
+                <button type="submit" className="btn btn--gold">APPLY</button>
+              </div>
+            </form>
+          )}
+          {discountMsg && <div className={discountMsg.ok ? 'success-msg' : 'error-msg'} style={{ marginTop: 8 }}>{discountMsg.text}</div>}
         </div>
       </div>
     </div>

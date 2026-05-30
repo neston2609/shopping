@@ -32,6 +32,11 @@ export default function Customers() {
   const [openId, setOpenId] = useState(null);
   const load = () => api.get(`/admin/customers?limit=100&q=${encodeURIComponent(q)}`).then(setData);
   useEffect(() => { load(); }, []); // eslint-disable-line
+  const remove = async (c) => {
+    if (!confirm(`Delete customer ${c.email}? Their addresses & cart will be removed; orders stay (anonymised).`)) return;
+    await api.del(`/admin/customers/${c.id}`);
+    load();
+  };
 
   return (
     <>
@@ -48,7 +53,10 @@ export default function Customers() {
               <tr key={c.id}>
                 <td>{c.name || '—'}</td><td className="muted">{c.email}</td><td>{c.orderCount}</td><td>{c.coins}</td>
                 <td className="muted">{new Date(c.createdAt).toLocaleDateString()}</td>
-                <td><button className="btn btn--cyan btn--sm" onClick={() => setOpenId(c.id)}>VIEW</button></td>
+                <td className="row-actions">
+                  <button className="btn btn--cyan btn--sm" onClick={() => setOpenId(c.id)}>VIEW</button>
+                  <button className="btn btn--sm" onClick={() => remove(c)}>DEL</button>
+                </td>
               </tr>
             ))}
             {!data.customers.length && <tr><td colSpan={6} className="muted">No customers.</td></tr>}

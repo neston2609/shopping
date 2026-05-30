@@ -1,8 +1,10 @@
 const bcrypt = require('bcryptjs');
+const { nanoid } = require('nanoid');
 const { z } = require('zod');
 const prisma = require('../lib/prisma');
 const { signToken } = require('../lib/token');
 const { asyncHandler, unauthorized, conflict, notFound } = require('../utils/http');
+const { queueTemplateEmail } = require('../lib/mailer');
 
 const USERNAME_RE = /^[a-zA-Z0-9_]{3,30}$/;
 
@@ -74,8 +76,37 @@ const register = asyncHandler(async (req, res) => {
     include: { role: true },
   });
 
+  // Auto-issue welcome discount: 15% off, min ฿2000, valid 30 days.
+  const welcomeCode = `WELCOME-${nanoid(8).toUpperCase()}`;
+  const validUntil = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+  await prisma.discountCode.create({
+    data: {
+      code: welcomeCode,
+      description: 'Welcome — 15% off, min ฿2000, valid 30 days',
+      type: 'percent',
+      value: 15,
+      minSubtotal: 2000,
+      validUntil,
+      perUserLimit: 1,
+      userId: user.id,
+      enabled: true,
+    },
+  });
+
+  // Email the code (queued; respects SMTP enabled flag).
+  queueTemplateEmail('welcome_discount', {
+    to: user.email,
+    vars: {
+      customer_name: [user.firstName, user.lastName].filter(Boolean).join(' ') || user.email,
+      discount_code: welcomeCode,
+      discount_value: '15%',
+      discount_min: '฿2,000',
+      discount_expiry: validUntil.toLocaleDateString('en-GB'),
+    },
+  }).catch(() => {});
+
   const token = signToken({ sub: user.id, role: user.role.name });
-  res.status(201).json({ token, user: publicUser(user) });
+  res.status(201).json({ token, user: publicUser(user), welcomeCode });
 });
 
 const login = asyncHandler(async (req, res) => {

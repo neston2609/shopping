@@ -62,4 +62,10 @@ const getOne = asyncHandler(async (req, res) => {
   });
 });
 
-module.exports = { list, getOne };
+const remove = asyncHandler(async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  await prisma.user.delete({ where: { id } });
+  res.json({ ok: true });
+});
+
+module.exports = { list, getOne, remove };

@@ -2,9 +2,10 @@ const express = require('express');
 const { authenticate } = require('../middleware/auth');
 const { requireRole } = require('../middleware/rbac');
 const { validate } = require('../middleware/validate');
-const { qrUpload, categoryImageUpload } = require('../lib/upload');
+const { qrUpload, categoryImageUpload, productImageUpload } = require('../lib/upload');
 const dlCategories = require('../controllers/admin/adminDownloadCategoryController');
 const hideRules = require('../controllers/admin/adminHideRuleController');
+const discounts = require('../controllers/admin/adminDiscountController');
 
 const products = require('../controllers/admin/adminProductController');
 const categories = require('../controllers/admin/adminCategoryController');
@@ -32,6 +33,8 @@ router.post('/products', validate(products.upsertSchema), products.create);
 router.get('/products/:id', products.getOne);
 router.put('/products/:id', validate(products.upsertSchema), products.update);
 router.delete('/products/:id', products.remove);
+router.post('/products/:id/images', productImageUpload.single('image'), products.uploadImage);
+router.delete('/products/:id/images/:imageId', products.removeImage);
 
 // Categories
 router.get('/categories', categories.list);
@@ -50,6 +53,13 @@ router.patch('/orders/:id/approve-payment', orders.approvePayment);
 // Customers
 router.get('/customers', customers.list);
 router.get('/customers/:id', customers.getOne);
+router.delete('/customers/:id', customers.remove);
+
+// Discount codes
+router.get('/discounts', discounts.list);
+router.post('/discounts', validate(discounts.upsertSchema), discounts.create);
+router.put('/discounts/:id', validate(discounts.upsertSchema), discounts.update);
+router.delete('/discounts/:id', discounts.remove);
 
 // Shipping methods
 router.get('/shipping', shipping.list);

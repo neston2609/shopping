@@ -16,6 +16,7 @@ function serialize(p) {
     rarity: p.rarity,
     platform: p.platform,
     artVariant: p.artVariant,
+    youtubeUrl: p.youtubeUrl || null,
     category: p.category ? { id: p.category.id, name: p.category.name, slug: p.category.slug } : null,
     images: (p.images || []).map((i) => ({ id: i.id, url: i.url, alt: i.alt, position: i.position })),
     attributes: (p.attributes || []).map((a) => ({ id: a.id, name: a.name, value: a.value })),

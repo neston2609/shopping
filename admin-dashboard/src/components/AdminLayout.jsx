@@ -7,6 +7,7 @@ const LINKS = [
   ['/categories', 'CATEGORIES'],
   ['/orders', 'ORDERS'],
   ['/customers', 'CUSTOMERS'],
+  ['/discounts', 'DISCOUNTS'],
   ['/shipping', 'SHIPPING'],
   ['/payments', 'PAYMENTS'],
   ['/smtp', 'SMTP / EMAIL'],
