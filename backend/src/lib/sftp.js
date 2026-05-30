@@ -234,13 +234,15 @@ async function testConnection(settingsOverride, passwordOverride) {
 }
 
 // Customer: stream an image inline (no attachment), with cache headers.
-// Used for folder thumbnails.
+// Used for folder thumbnails. Hide rules are NOT enforced here — the whole
+// point of folder.jpg is to BE the thumbnail even when *.jpg is in the hide
+// list (otherwise the thumbnail would show as a downloadable file too).
+// We do limit this endpoint to common image filenames so a hidden non-image
+// file can't be exfiltrated through it.
 async function streamInline(category, sub, res) {
-  const hideRegexes = await getHideRules();
   return withClient(async (ops) => {
     const full = safeResolve(category.sftpPath, sub);
-    const segments = full.split('/').filter(Boolean);
-    if (segments.some((seg) => isHidden(seg, hideRegexes))) throw new ApiError(404, 'Not found');
+    if (!/\.(jpe?g|png|webp|gif)$/i.test(full)) throw new ApiError(400, 'Not an image');
     const ext = path.posix.extname(full).toLowerCase();
     const mime =
       ext === '.png'  ? 'image/png'  :
