@@ -455,18 +455,49 @@ model DiscountRedemption {
   @@map("discount_redemptions")
 }
 
+model DownloadSource {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique // e.g. "NAS @ home", "OneDrive primary"
+  protocol    String   @default("sftp") // sftp | ftp | ftps | onedrive | googledrive
+  enabled     Boolean  @default(true)
+
+  // SFTP / FTP / FTPS
+  host        String?
+  port        Int?     @default(22)
+  username    String?
+  passwordEnc String?  @map("password_enc")
+  basePath    String?  @default("/") @map("base_path")
+
+  // OAuth2 for OneDrive / Google Drive
+  oauthClientId        String?   @map("oauth_client_id")
+  oauthClientSecretEnc String?   @map("oauth_client_secret_enc")
+  oauthRefreshTokenEnc String?   @map("oauth_refresh_token_enc")
+  oauthAccessTokenEnc  String?   @map("oauth_access_token_enc")
+  oauthExpiresAt       DateTime? @map("oauth_expires_at")
+  oauthAccount         String?   @map("oauth_account") // displayed login (email / drive name)
+
+  categories DownloadCategory[]
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@map("download_sources")
+}
+
 model DownloadCategory {
   id          Int      @id @default(autoincrement())
   name        String
   slug        String   @unique
   description String?
   imageUrl    String?  @map("image_url")
-  sftpPath    String   @map("sftp_path") // absolute path on the SFTP server
+  sourceId    Int?     @map("source_id")
+  source      DownloadSource? @relation(fields: [sourceId], references: [id], onDelete: SetNull)
+  sftpPath    String   @map("sftp_path") // absolute path / folder id within the chosen source
   enabled     Boolean  @default(true)
   position    Int      @default(0)
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
+  @@index([sourceId])
   @@map("download_categories")
 }
 

@@ -17,6 +17,11 @@ const { optionalAuth } = require('../middleware/auth');
 const { validate } = require('../middleware/validate');
 const discountCtrl = require('../controllers/discountController');
 router.post('/discount/validate', optionalAuth, validate(discountCtrl.validateSchema), discountCtrl.validate);
+
+// OAuth callback for OneDrive / Google Drive — browser redirect, no auth header.
+// Authenticated via signed state token.
+const adminSourcesCtrl = require('../controllers/admin/adminSourceController');
+router.get('/sources/oauth/callback', adminSourcesCtrl.oauthCallback);
 router.use('/account', require('./account'));
 router.use('/admin', require('./admin'));
 

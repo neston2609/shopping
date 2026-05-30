@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
 
-// Modal that browses the SFTP server. Click folders to navigate in;
+// Modal that browses a download source. Click folders to navigate in;
 // click "Select this folder" to send the current path back to the parent.
-export default function FolderPicker({ open, initialPath, onSelect, onClose }) {
+// For SFTP/FTP/FTPS sources, "path" is the absolute filesystem path.
+// For OneDrive / Google Drive sources, "path" is the opaque folder id ("root" = drive root).
+export default function FolderPicker({ open, sourceId, initialPath, onSelect, onClose }) {
   const [path, setPath] = useState(initialPath || '');
   const [data, setData] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -11,10 +13,11 @@ export default function FolderPicker({ open, initialPath, onSelect, onClose }) {
 
   useEffect(() => {
     if (!open) return;
+    if (!sourceId) { setError('Pick a source first.'); setData(null); return; }
     setBusy(true);
     setError('');
     api
-      .get(`/admin/sftp/browse?path=${encodeURIComponent(path)}`)
+      .get(`/admin/sources/${sourceId}/browse?path=${encodeURIComponent(path)}`)
       .then((r) => {
         if (r.ok === false) {
           setError(r.message || 'Browse failed');
@@ -26,14 +29,16 @@ export default function FolderPicker({ open, initialPath, onSelect, onClose }) {
       })
       .catch((e) => setError(e.message))
       .finally(() => setBusy(false));
-  }, [open, path]);
+  }, [open, sourceId, path]);
 
   if (!open) return null;
   return (
     <div className="modal-back" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()} style={{ width: 720 }}>
-        <h2>BROWSE SFTP FOLDER</h2>
-        <div className="muted" style={{ marginBottom: 8 }}>Click a folder to open it. Click <b>Select this folder</b> when you're in the path you want.</div>
+        <h2>BROWSE FOLDER</h2>
+        <div className="muted" style={{ marginBottom: 8 }}>
+          Click a folder to open it. Click <b>Select this folder</b> when you're in the path you want.
+        </div>
 
         <div className="field">
           <label>CURRENT PATH</label>

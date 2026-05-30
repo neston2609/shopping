@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { api, getToken } from '../api';
 import FolderPicker from '../components/FolderPicker';
 
@@ -14,18 +15,12 @@ function fmtSize(n) {
   return `${x.toFixed(i ? 1 : 0)} ${u[i]}`;
 }
 
-// ----- SFTP connection form -----
-function SftpForm({ onSaved }) {
+// ----- Display / global settings (master enable, aff gate, thumb size) -----
+function DisplaySettings({ sourceCount }) {
   const [form, setForm] = useState(null);
-  const [hasPassword, setHasPassword] = useState(false);
   const [msg, setMsg] = useState(null);
-  const [pickerOpen, setPickerOpen] = useState(false);
 
-  const load = () =>
-    api.get('/admin/sftp').then((d) => {
-      setForm({ ...d.settings, password: '' });
-      setHasPassword(d.settings.hasPassword);
-    });
+  const load = () => api.get('/admin/sftp').then((d) => setForm(d.settings));
   useEffect(() => { load(); }, []);
   if (!form) return null;
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: k === 'enabled' ? e.target.checked : e.target.value }));
@@ -33,130 +28,75 @@ function SftpForm({ onSaved }) {
   const save = async (e) => {
     e.preventDefault();
     setMsg(null);
-    const payload = {
-      protocol: form.protocol || 'sftp',
-      host: form.host,
-      port: Number(form.port),
-      username: form.username,
-      basePath: form.basePath,
-      enabled: form.enabled,
-      affLink: form.affLink || '',
-      affDelaySeconds: Number(form.affDelaySeconds) || 0,
-      folderThumbHeight: Number(form.folderThumbHeight) || 48,
-    };
-    if (form.password) payload.password = form.password;
     try {
+      const payload = {
+        enabled: !!form.enabled,
+        affLink: form.affLink || '',
+        affDelaySeconds: Number(form.affDelaySeconds) || 0,
+        folderThumbHeight: Number(form.folderThumbHeight) || 48,
+      };
       await api.put('/admin/sftp', payload);
       setMsg({ ok: true, text: 'Settings saved.' });
       load();
-      onSaved && onSaved();
-    } catch (err) {
-      setMsg({ ok: false, text: err.message });
-    }
-  };
-
-  const test = async () => {
-    setMsg({ ok: true, text: 'Testing…' });
-    try {
-      const r = await api.post('/admin/sftp/test');
-      if (r.ok) {
-        setMsg({ ok: true, text: r.message, sample: r.sample });
-      } else {
-        setMsg({ ok: false, text: r.message });
-      }
     } catch (err) {
       setMsg({ ok: false, text: err.message });
     }
   };
 
   return (
-    <>
-      <form className="card" onSubmit={save} style={{ maxWidth: 760 }}>
-        {!form.enabled && form.host && form.username && (
-          <div className="error-msg" style={{ marginBottom: 14 }}>
-            ⚠ Connection is configured but <b>DOWNLOADS ENABLED</b> is off — customers will see "Downloads are currently disabled". Tick the box below and SAVE.
-          </div>
-        )}
-        <label className="toggle" style={{ marginBottom: 14 }}>
-          <input type="checkbox" checked={form.enabled} onChange={set('enabled')} /> DOWNLOADS ENABLED
-        </label>
-        <div className="field">
-          <label>PROTOCOL</label>
-          <div style={{ display: 'flex', gap: 18 }}>
-            {['sftp', 'ftp', 'ftps'].map((p) => (
-              <label key={p} style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
-                <input type="radio" name="protocol" value={p} checked={(form.protocol || 'sftp') === p} onChange={() => setForm((f) => ({ ...f, protocol: p, port: f.port || (p === 'sftp' ? 22 : 21) }))} />
-                <span style={{ textTransform: 'uppercase', fontFamily: 'Press Start 2P, monospace', fontSize: 10 }}>{p}</span>
-              </label>
-            ))}
-          </div>
+    <form className="card" onSubmit={save} style={{ maxWidth: 760 }}>
+      {form.enabled && sourceCount === 0 && (
+        <div className="error-msg" style={{ marginBottom: 14 }}>
+          ⚠ Downloads are enabled but you haven't created any <b>SOURCES</b> yet — head to <Link to="/sources" style={{ color: 'var(--cyan)' }}>DOWNLOAD SOURCES</Link> and add at least one site.
         </div>
-        <div className="grid2">
-          <div className="field"><label>SFTP HOST</label><input value={form.host} onChange={set('host')} placeholder="files.example.com" /></div>
-          <div className="field"><label>PORT</label><input type="number" value={form.port} onChange={set('port')} /></div>
+      )}
+      {!form.enabled && (
+        <div className="error-msg" style={{ marginBottom: 14 }}>
+          ⚠ <b>DOWNLOADS ENABLED</b> is off — customers will see "Downloads are currently disabled". Tick the box below and SAVE.
         </div>
-        <div className="grid2">
-          <div className="field"><label>USERNAME</label><input value={form.username} onChange={set('username')} /></div>
-          <div className="field"><label>PASSWORD</label><input type="password" placeholder={hasPassword ? '•••• already set' : 'not set'} value={form.password} onChange={set('password')} /></div>
-        </div>
-        <div className="field">
-          <label>BASE PATH (default starting folder for the browser)</label>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <input style={{ flex: 1 }} value={form.basePath} onChange={set('basePath')} placeholder="/home/files" />
-            <button type="button" className="btn btn--cyan btn--sm" onClick={() => setPickerOpen(true)}>BROWSE…</button>
-          </div>
-        </div>
+      )}
+      <label className="toggle" style={{ marginBottom: 14 }}>
+        <input type="checkbox" checked={form.enabled} onChange={set('enabled')} /> DOWNLOADS ENABLED (master switch)
+      </label>
 
-        <div className="px" style={{ fontSize: 11, color: 'var(--gold)', marginTop: 14, marginBottom: 6 }}>// AFFILIATE GATE (optional)</div>
-        <div className="muted" style={{ marginBottom: 8 }}>If set, the customer's download click opens this URL in a new tab and they have to wait the configured seconds before the file actually downloads.</div>
-        <div className="grid2">
-          <div className="field"><label>AFFILIATE LINK</label><input value={form.affLink || ''} onChange={set('affLink')} placeholder="https://yourshorturl.com/abc (leave blank to skip)" /></div>
-          <div className="field"><label>DELAY (SECONDS, 0-120)</label><input type="number" min="0" max="120" value={form.affDelaySeconds ?? 0} onChange={set('affDelaySeconds')} /></div>
-        </div>
+      <div className="px" style={{ fontSize: 11, color: 'var(--gold)', marginTop: 6, marginBottom: 6 }}>// AFFILIATE GATE (optional)</div>
+      <div className="muted" style={{ marginBottom: 8 }}>If set, the customer's download click opens this URL in a new tab and they have to wait the configured seconds before the file actually downloads.</div>
+      <div className="grid2">
+        <div className="field"><label>AFFILIATE LINK</label><input value={form.affLink || ''} onChange={set('affLink')} placeholder="https://yourshorturl.com/abc (leave blank to skip)" /></div>
+        <div className="field"><label>DELAY (SECONDS, 0-120)</label><input type="number" min="0" max="120" value={form.affDelaySeconds ?? 0} onChange={set('affDelaySeconds')} /></div>
+      </div>
 
-        <div className="px" style={{ fontSize: 11, color: 'var(--gold)', marginTop: 14, marginBottom: 6 }}>// FOLDER THUMBNAIL DISPLAY</div>
-        <div className="field">
-          <label>FOLDER.JPG THUMBNAIL HEIGHT (px) — width auto-scales by aspect ratio</label>
-          <input type="number" min="16" max="400" value={form.folderThumbHeight ?? 48} onChange={set('folderThumbHeight')} />
-        </div>
+      <div className="px" style={{ fontSize: 11, color: 'var(--gold)', marginTop: 14, marginBottom: 6 }}>// FOLDER THUMBNAIL DISPLAY</div>
+      <div className="field">
+        <label>FOLDER.JPG THUMBNAIL HEIGHT (px) — width auto-scales by aspect ratio</label>
+        <input type="number" min="16" max="400" value={form.folderThumbHeight ?? 48} onChange={set('folderThumbHeight')} />
+      </div>
 
-        {msg && (
-          <div className={msg.ok ? 'success-msg' : 'error-msg'}>
-            {msg.text}
-            {msg.sample && msg.sample.length > 0 && (
-              <ul style={{ marginTop: 8, paddingLeft: 16, fontFamily: 'VT323, monospace', fontSize: 16, lineHeight: 1.4 }}>
-                {msg.sample.map((s, i) => <li key={i}>{s}</li>)}
-              </ul>
-            )}
-          </div>
-        )}
+      {msg && <div className={msg.ok ? 'success-msg' : 'error-msg'}>{msg.text}</div>}
 
-        <div className="row-actions" style={{ marginTop: 10 }}>
-          <button className="btn btn--lime" type="submit">SAVE</button>
-          <button className="btn btn--cyan" type="button" onClick={test}>TEST CONNECTION</button>
-        </div>
-      </form>
-
-      <FolderPicker
-        open={pickerOpen}
-        initialPath={form.basePath}
-        onSelect={(p) => setForm((f) => ({ ...f, basePath: p }))}
-        onClose={() => setPickerOpen(false)}
-      />
-    </>
+      <div className="row-actions" style={{ marginTop: 10 }}>
+        <button className="btn btn--lime" type="submit">SAVE</button>
+        <Link to="/sources" className="btn btn--cyan btn--sm" style={{ textDecoration: 'none' }}>MANAGE SOURCES →</Link>
+      </div>
+    </form>
   );
 }
 
 // ----- Category row (edit + image upload + path browse) -----
-const BLANK_CAT = { name: '', slug: '', description: '', sftpPath: '', enabled: true, position: 0 };
+const BLANK_CAT = { name: '', slug: '', description: '', sourceId: '', sftpPath: '', enabled: true, position: 0 };
 
-function CategoryEditor({ initial, onSaved, onCancel }) {
-  const [form, setForm] = useState(initial || BLANK_CAT);
+function CategoryEditor({ initial, sources, onSaved, onCancel }) {
+  const [form, setForm] = useState(initial ? { ...initial, sourceId: initial.sourceId || '' } : BLANK_CAT);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [msg, setMsg] = useState(null);
-  const [pendingImage, setPendingImage] = useState(null); // File picked before save
-  const [previewUrl, setPreviewUrl] = useState(null);     // local preview for pending file
+  const [pendingImage, setPendingImage] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(null);
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: k === 'enabled' ? e.target.checked : e.target.value }));
+
+  const currentSource = sources.find((s) => String(s.id) === String(form.sourceId));
+  const isCloud = currentSource && ['onedrive', 'googledrive'].includes(currentSource.protocol);
+  const pathLabel = isCloud ? 'FOLDER ID (paste an id, or use "root" for the drive root) *' : 'PATH (absolute path on the server) *';
+  const pathPlaceholder = isCloud ? 'root  or  01ABCDXYZ123…' : '/var/files/roms';
 
   const choosePendingImage = (file) => {
     if (!file) {
@@ -187,9 +127,20 @@ function CategoryEditor({ initial, onSaved, onCancel }) {
   const save = async (e) => {
     e.preventDefault();
     setMsg(null);
+    if (!form.sourceId) { setMsg({ ok: false, text: 'Pick a source.' }); return; }
     try {
-      const payload = { name: form.name, slug: form.slug, description: form.description, sftpPath: form.sftpPath, enabled: form.enabled, position: Number(form.position) || 0 };
-      const r = initial?.id ? await api.put(`/admin/download-categories/${initial.id}`, payload) : await api.post('/admin/download-categories', payload);
+      const payload = {
+        name: form.name,
+        slug: form.slug,
+        description: form.description,
+        sourceId: Number(form.sourceId) || null,
+        sftpPath: form.sftpPath,
+        enabled: form.enabled,
+        position: Number(form.position) || 0,
+      };
+      const r = initial?.id
+        ? await api.put(`/admin/download-categories/${initial.id}`, payload)
+        : await api.post('/admin/download-categories', payload);
       let cat = r.category;
       if (pendingImage) {
         cat = await uploadImageFor(cat.id, pendingImage);
@@ -212,19 +163,38 @@ function CategoryEditor({ initial, onSaved, onCancel }) {
           <div className="field"><label>SLUG (auto if blank)</label><input value={form.slug} onChange={set('slug')} placeholder={form.name ? form.name.toLowerCase().replace(/[^a-z0-9]+/g,'-') : ''} /></div>
         </div>
         <div className="field"><label>DESCRIPTION</label><textarea value={form.description} onChange={set('description')} style={{ minHeight: 60 }} /></div>
-        <div className="field">
-          <label>SFTP PATH (absolute path on the SFTP server) *</label>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <input style={{ flex: 1 }} value={form.sftpPath} onChange={set('sftpPath')} placeholder="/var/files/roms" required />
-            <button type="button" className="btn btn--cyan btn--sm" onClick={() => setPickerOpen(true)}>BROWSE…</button>
+
+        <div className="grid2">
+          <div className="field">
+            <label>SOURCE *</label>
+            <select value={form.sourceId} onChange={set('sourceId')} required>
+              <option value="">— pick a source —</option>
+              {sources.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name} [{(s.protocol || 'sftp').toUpperCase()}]{s.enabled ? '' : ' (disabled)'}
+                </option>
+              ))}
+            </select>
+            {!sources.length && <div className="muted" style={{ marginTop: 6 }}>No sources yet. <Link to="/sources" style={{ color: 'var(--cyan)' }}>Create one →</Link></div>}
+          </div>
+          <div className="field">
+            <label>POSITION</label>
+            <input type="number" value={form.position} onChange={set('position')} />
           </div>
         </div>
-        <div className="grid2">
-          <div className="field"><label>POSITION</label><input type="number" value={form.position} onChange={set('position')} /></div>
-          <div className="field">
-            <label>STATUS</label>
-            <label className="toggle"><input type="checkbox" checked={form.enabled} onChange={set('enabled')} /> {form.enabled ? 'ENABLED' : 'DISABLED'}</label>
+
+        <div className="field">
+          <label>{pathLabel}</label>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <input style={{ flex: 1 }} value={form.sftpPath} onChange={set('sftpPath')} placeholder={pathPlaceholder} required />
+            <button type="button" className="btn btn--cyan btn--sm" disabled={!form.sourceId} onClick={() => setPickerOpen(true)}>BROWSE…</button>
           </div>
+          {isCloud && <div className="muted" style={{ marginTop: 6 }}>Tip: open the folder in {currentSource?.protocol === 'onedrive' ? 'OneDrive' : 'Google Drive'}, copy the folder id from the URL, paste it here — or use BROWSE.</div>}
+        </div>
+
+        <div className="field">
+          <label>STATUS</label>
+          <label className="toggle"><input type="checkbox" checked={form.enabled} onChange={set('enabled')} /> {form.enabled ? 'ENABLED' : 'DISABLED'}</label>
         </div>
 
         <div className="field">
@@ -244,6 +214,7 @@ function CategoryEditor({ initial, onSaved, onCancel }) {
 
       <FolderPicker
         open={pickerOpen}
+        sourceId={form.sourceId ? Number(form.sourceId) : null}
         initialPath={form.sftpPath || undefined}
         onSelect={(p) => setForm((f) => ({ ...f, sftpPath: p }))}
         onClose={() => setPickerOpen(false)}
@@ -252,9 +223,9 @@ function CategoryEditor({ initial, onSaved, onCancel }) {
   );
 }
 
-function Categories() {
+function Categories({ sources }) {
   const [cats, setCats] = useState([]);
-  const [editingId, setEditingId] = useState(null); // id, or 'new', or null
+  const [editingId, setEditingId] = useState(null);
   const load = () => api.get('/admin/download-categories').then((d) => setCats(d.categories || []));
   useEffect(() => { load(); }, []);
 
@@ -272,17 +243,17 @@ function Categories() {
       </div>
 
       {editingId === 'new' && (
-        <CategoryEditor onSaved={(c) => { setEditingId(c.id); load(); }} onCancel={() => setEditingId(null)} />
+        <CategoryEditor sources={sources} onSaved={(c) => { setEditingId(c.id); load(); }} onCancel={() => setEditingId(null)} />
       )}
 
       <table>
-        <thead><tr><th>Image</th><th>Name</th><th>Slug</th><th>SFTP Path</th><th>Pos</th><th>Status</th><th></th></tr></thead>
+        <thead><tr><th>Image</th><th>Name</th><th>Slug</th><th>Source</th><th>Path / Folder Id</th><th>Pos</th><th>Status</th><th></th></tr></thead>
         <tbody>
           {cats.map((c) => (
             editingId === c.id ? (
               <tr key={c.id}>
-                <td colSpan={7}>
-                  <CategoryEditor initial={c} onSaved={() => { load(); }} onCancel={() => setEditingId(null)} />
+                <td colSpan={8}>
+                  <CategoryEditor initial={c} sources={sources} onSaved={() => { load(); }} onCancel={() => setEditingId(null)} />
                 </td>
               </tr>
             ) : (
@@ -290,6 +261,16 @@ function Categories() {
                 <td>{c.imageUrl ? <img src={c.imageUrl} alt="" style={{ width: 60, height: 40, objectFit: 'cover', border: '2px solid #fff' }} /> : <span className="muted">—</span>}</td>
                 <td>{c.name}</td>
                 <td className="muted">{c.slug}</td>
+                <td>
+                  {c.sourceName ? (
+                    <>
+                      {c.sourceName}{' '}
+                      <span className="px" style={{ fontSize: 9, color: 'var(--gold)' }}>[{(c.sourceProtocol || 'sftp').toUpperCase()}]</span>
+                    </>
+                  ) : (
+                    <span className="error-msg" style={{ padding: '2px 6px', fontSize: 11 }}>UNMAPPED</span>
+                  )}
+                </td>
                 <td className="muted" style={{ fontFamily: 'VT323, monospace' }}>{c.sftpPath}</td>
                 <td>{c.position}</td>
                 <td><span className={`badge ${c.enabled ? 'active' : 'inactive'}`}>{c.enabled ? 'ON' : 'OFF'}</span></td>
@@ -300,14 +281,14 @@ function Categories() {
               </tr>
             )
           ))}
-          {!cats.length && <tr><td colSpan={7} className="muted">No download categories yet. Click "+ NEW CATEGORY" to add one.</td></tr>}
+          {!cats.length && <tr><td colSpan={8} className="muted">No download categories yet. Click "+ NEW CATEGORY" to add one.</td></tr>}
         </tbody>
       </table>
     </div>
   );
 }
 
-// ----- Hide rules (hide files/folders by name or wildcard) -----
+// ----- Hide rules (unchanged) -----
 function HideRules() {
   const [rules, setRules] = useState([]);
   const [newPattern, setNewPattern] = useState('');
@@ -423,14 +404,17 @@ function RecentLogs() {
 }
 
 export default function Downloads() {
+  const [sources, setSources] = useState([]);
+  useEffect(() => { api.get('/admin/sources').then((d) => setSources(d.sources || [])).catch(() => {}); }, []);
   return (
     <>
       <div className="toprow"><div className="h1">DOWNLOADS</div></div>
       <div className="muted" style={{ marginBottom: 16 }}>
-        Configure your SFTP connection, then create download categories that map to folders on your server. Customers see the categories you create and can drill into the mapped folder + subfolders.
+        Manage download <b>sources</b> (servers / cloud accounts) on the{' '}
+        <Link to="/sources" style={{ color: 'var(--cyan)' }}>DOWNLOAD SOURCES</Link> page, then create categories below and map each one to a source + folder.
       </div>
-      <SftpForm />
-      <Categories />
+      <DisplaySettings sourceCount={sources.length} />
+      <Categories sources={sources} />
       <HideRules />
       <RecentLogs />
     </>

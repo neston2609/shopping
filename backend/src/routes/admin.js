@@ -18,6 +18,7 @@ const smtp = require('../controllers/admin/adminSmtpController');
 const templates = require('../controllers/admin/adminTemplateController');
 const misc = require('../controllers/admin/adminMiscController');
 const sftp = require('../controllers/admin/adminSftpController');
+const adminSources = require('../controllers/admin/adminSourceController');
 
 const router = express.Router();
 
@@ -85,12 +86,19 @@ router.put('/smtp', validate(smtp.updateSchema), smtp.update);
 router.post('/smtp/test-connection', smtp.testConnection);
 router.post('/smtp/test-email', validate(smtp.testSchema), smtp.sendTestEmail);
 
-// SFTP downloads config
+// Download display settings (aff link, folder thumb height — global)
 router.get('/sftp', sftp.get);
 router.put('/sftp', validate(sftp.updateSchema), sftp.update);
-router.post('/sftp/test', sftp.test);
-router.get('/sftp/browse', sftp.browse);
 router.get('/downloads/logs', sftp.listLogs);
+// Multi-source download CRUD + per-source test/browse/oauth
+router.get('/sources', adminSources.list);
+router.post('/sources', validate(adminSources.upsertSchema), adminSources.create);
+router.put('/sources/:id', validate(adminSources.upsertSchema), adminSources.update);
+router.delete('/sources/:id', adminSources.remove);
+router.post('/sources/:id/test', adminSources.test);
+router.get('/sources/:id/browse', adminSources.browse);
+router.post('/sources/:id/oauth/start', adminSources.oauthStart);
+router.post('/sources/:id/disconnect', adminSources.disconnect);
 router.get('/download-categories', dlCategories.list);
 router.post('/download-categories', validate(dlCategories.upsertSchema), dlCategories.create);
 router.put('/download-categories/:id', validate(dlCategories.upsertSchema), dlCategories.update);

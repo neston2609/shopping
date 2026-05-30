@@ -13,6 +13,7 @@ import Smtp from './pages/Smtp';
 import Templates from './pages/Templates';
 import EmailLogs from './pages/EmailLogs';
 import Downloads from './pages/Downloads';
+import Sources from './pages/Sources';
 import Account from './pages/Account';
 import Discounts from './pages/Discounts';
 import Storefront from './pages/Storefront';
@@ -35,6 +36,7 @@ export default function App() {
             <Route path="/templates" element={<Templates />} />
             <Route path="/email-logs" element={<EmailLogs />} />
             <Route path="/downloads" element={<Downloads />} />
+            <Route path="/sources" element={<Sources />} />
             <Route path="/account" element={<Account />} />
             <Route path="/discounts" element={<Discounts />} />
             <Route path="/storefront" element={<Storefront />} />

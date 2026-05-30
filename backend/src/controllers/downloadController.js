@@ -1,6 +1,6 @@
 const prisma = require('../lib/prisma');
 const { asyncHandler, badRequest, notFound } = require('../utils/http');
-const { listForCategory, streamFromCategory, streamInline } = require('../lib/sftp');
+const { listForCategory, streamFromCategory, streamInline } = require('../lib/sources');
 
 function publicCategory(c) {
   return {
@@ -15,20 +15,14 @@ function publicCategory(c) {
 
 async function affConfig() {
   const row = await prisma.sftpSettings.findFirst({ orderBy: { id: 'asc' } });
-  return {
-    url: row?.affLink || '',
-    delaySeconds: row?.affDelaySeconds || 0,
-  };
+  return { url: row?.affLink || '', delaySeconds: row?.affDelaySeconds || 0 };
 }
 
 async function downloadsDisplayConfig() {
   const row = await prisma.sftpSettings.findFirst({ orderBy: { id: 'asc' } });
-  return {
-    folderThumbHeight: row?.folderThumbHeight || 48,
-  };
+  return { folderThumbHeight: row?.folderThumbHeight || 48 };
 }
 
-// GET /api/downloads — list enabled download categories
 const listCategories = asyncHandler(async (req, res) => {
   const [cats, aff, display] = await Promise.all([
     prisma.downloadCategory.findMany({
@@ -42,16 +36,22 @@ const listCategories = asyncHandler(async (req, res) => {
 });
 
 async function loadCategory(slug) {
-  const cat = await prisma.downloadCategory.findUnique({ where: { slug } });
+  const cat = await prisma.downloadCategory.findUnique({
+    where: { slug },
+    include: { source: true },
+  });
   if (!cat || !cat.enabled) throw notFound('Category not found');
   return cat;
 }
 
-// GET /api/downloads/:slug?path=<sub>  — browse files/subfolders within a category
 const browseCategory = asyncHandler(async (req, res) => {
   const cat = await loadCategory(req.params.slug);
   const sub = req.query.path || '';
-  const [items, aff, display] = await Promise.all([listForCategory(cat, sub), affConfig(), downloadsDisplayConfig()]);
+  const [items, aff, display] = await Promise.all([
+    listForCategory(cat, sub),
+    affConfig(),
+    downloadsDisplayConfig(),
+  ]);
   res.json({
     category: publicCategory(cat),
     path: String(sub).replace(/^\/+|\/+$/g, ''),
@@ -61,7 +61,6 @@ const browseCategory = asyncHandler(async (req, res) => {
   });
 });
 
-// GET /api/downloads/:slug/file?path=<sub>  — stream a file from a category
 const downloadFile = asyncHandler(async (req, res) => {
   const cat = await loadCategory(req.params.slug);
   const sub = req.query.path;
@@ -72,15 +71,14 @@ const downloadFile = asyncHandler(async (req, res) => {
       data: {
         userId: req.user?.id || null,
         path: `${cat.slug}/${sub}`,
-        fileName: info.name,
-        sizeBytes: info.size ? Number(info.size) : null,
+        fileName: info?.name || String(sub),
+        sizeBytes: info?.size ? Number(info.size) : null,
         ip: req.ip,
       },
     })
     .catch(() => {});
 });
 
-// GET /api/downloads/:slug/thumb?path=<sub/folder.jpg>  — folder thumbnail (inline image)
 const thumbnail = asyncHandler(async (req, res) => {
   const cat = await loadCategory(req.params.slug);
   const sub = req.query.path;
