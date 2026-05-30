@@ -6,26 +6,35 @@ import { useCart } from '../context/CartContext';
 
 const CHIPS = ['ALL', 'CONSOLES', 'CARTRIDGES', 'CONTROLLERS', 'ACCESSORIES', 'UNDER ฿50', 'RARE+'];
 
-function Hero() {
+function Hero({ heroHeading, heroSubheading, freeShipping }) {
+  const showFreeShip = freeShipping?.enabled && freeShipping.threshold > 0;
   return (
     <div className="hero">
       <div className="hero-grid">
         <div>
           <span className="tag" style={{ color: 'var(--cyan)', borderColor: 'var(--cyan)' }}>⌂ PRESS START</span>
-          <h1>
-            COLLECT THE<br />
-            <span className="cyan">CONSOLES</span> THAT<br />
-            BUILT YOUR<br />
-            <span className="gold">CHILDHOOD</span>.
-          </h1>
-          <p>Hand-restored handhelds. Sealed cartridges. CRT-ready cables. Every drop comes with a 30-day reset button and free shipping past ฿50.</p>
+          {heroHeading ? (
+            <h1 dangerouslySetInnerHTML={{ __html: heroHeading }} />
+          ) : (
+            <h1>
+              COLLECT THE<br />
+              <span className="cyan">CONSOLES</span> THAT<br />
+              BUILT YOUR<br />
+              <span className="gold">CHILDHOOD</span>.
+            </h1>
+          )}
+          {heroSubheading ? (
+            <p dangerouslySetInnerHTML={{ __html: heroSubheading }} />
+          ) : (
+            <p>Hand-restored handhelds. Sealed cartridges. CRT-ready cables. Every drop comes with a 30-day reset button{showFreeShip ? ` and free shipping over ฿${Number(freeShipping.threshold).toLocaleString()}` : ''}.</p>
+          )}
           <div className="cta-row">
             <Link className="btn btn--lime" to="/shop">▶ ENTER SHOP</Link>
             <Link className="btn btn--ghost" to="/shop?sort=newest">VIEW NEW DROPS</Link>
             <span className="hint">PRESS <span className="kbd">A</span> TO BUY · <span className="kbd">B</span> TO BROWSE</span>
           </div>
           <div className="badges">
-            <span className="b bm">FREE SHIP ฿50+</span>
+            {showFreeShip && <span className="b bm">FREE SHIP ฿{Number(freeShipping.threshold).toLocaleString()}+</span>}
             <span className="b bc">30-DAY RESET</span>
             <span className="b bl">TESTED + WORKING</span>
             <span className="b bg">EARN COINS</span>
@@ -262,10 +271,14 @@ export default function Home() {
   const [categories, setCategories] = useState([]);
   const [featured, setFeatured] = useState([]);
   const [chip, setChip] = useState('ALL');
+  const [freeShipping, setFreeShipping] = useState({ enabled: false, threshold: 0 });
+  const [storeSettings, setStoreSettings] = useState({ heroHeading: '', heroSubheading: '' });
 
   useEffect(() => {
     api.get('/categories').then((d) => setCategories(d.categories || [])).catch(() => {});
     api.get('/products/featured').then((d) => setFeatured(d.items || [])).catch(() => {});
+    api.get('/shipping-methods').then((d) => setFreeShipping(d.freeShipping || { enabled: false, threshold: 0 })).catch(() => {});
+    api.get('/store-settings').then(setStoreSettings).catch(() => {});
   }, []);
 
   const boss = featured.find((p) => p.rarity === 'legendary') || featured[0];
@@ -273,7 +286,7 @@ export default function Home() {
 
   return (
     <>
-      <Hero />
+      <Hero heroHeading={storeSettings.heroHeading} heroSubheading={storeSettings.heroSubheading} freeShipping={freeShipping} />
       <UspStrip />
       {categories.length > 0 && <Categories categories={categories} />}
 

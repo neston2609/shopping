@@ -21,16 +21,24 @@ async function affConfig() {
   };
 }
 
+async function downloadsDisplayConfig() {
+  const row = await prisma.sftpSettings.findFirst({ orderBy: { id: 'asc' } });
+  return {
+    folderThumbHeight: row?.folderThumbHeight || 48,
+  };
+}
+
 // GET /api/downloads — list enabled download categories
 const listCategories = asyncHandler(async (req, res) => {
-  const [cats, aff] = await Promise.all([
+  const [cats, aff, display] = await Promise.all([
     prisma.downloadCategory.findMany({
       where: { enabled: true },
       orderBy: [{ position: 'asc' }, { name: 'asc' }],
     }),
     affConfig(),
+    downloadsDisplayConfig(),
   ]);
-  res.json({ categories: cats.map(publicCategory), aff });
+  res.json({ categories: cats.map(publicCategory), aff, display });
 });
 
 async function loadCategory(slug) {
@@ -43,12 +51,13 @@ async function loadCategory(slug) {
 const browseCategory = asyncHandler(async (req, res) => {
   const cat = await loadCategory(req.params.slug);
   const sub = req.query.path || '';
-  const [items, aff] = await Promise.all([listForCategory(cat, sub), affConfig()]);
+  const [items, aff, display] = await Promise.all([listForCategory(cat, sub), affConfig(), downloadsDisplayConfig()]);
   res.json({
     category: publicCategory(cat),
     path: String(sub).replace(/^\/+|\/+$/g, ''),
     items,
     aff,
+    display,
   });
 });
 

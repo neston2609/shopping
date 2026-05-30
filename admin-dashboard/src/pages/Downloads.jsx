@@ -42,6 +42,7 @@ function SftpForm({ onSaved }) {
       enabled: form.enabled,
       affLink: form.affLink || '',
       affDelaySeconds: Number(form.affDelaySeconds) || 0,
+      folderThumbHeight: Number(form.folderThumbHeight) || 48,
     };
     if (form.password) payload.password = form.password;
     try {
@@ -111,6 +112,12 @@ function SftpForm({ onSaved }) {
         <div className="grid2">
           <div className="field"><label>AFFILIATE LINK</label><input value={form.affLink || ''} onChange={set('affLink')} placeholder="https://yourshorturl.com/abc (leave blank to skip)" /></div>
           <div className="field"><label>DELAY (SECONDS, 0-120)</label><input type="number" min="0" max="120" value={form.affDelaySeconds ?? 0} onChange={set('affDelaySeconds')} /></div>
+        </div>
+
+        <div className="px" style={{ fontSize: 11, color: 'var(--gold)', marginTop: 14, marginBottom: 6 }}>// FOLDER THUMBNAIL DISPLAY</div>
+        <div className="field">
+          <label>FOLDER.JPG THUMBNAIL HEIGHT (px) — width auto-scales by aspect ratio</label>
+          <input type="number" min="16" max="400" value={form.folderThumbHeight ?? 48} onChange={set('folderThumbHeight')} />
         </div>
 
         {msg && (

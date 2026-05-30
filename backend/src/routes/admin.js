@@ -6,6 +6,7 @@ const { qrUpload, categoryImageUpload, productImageUpload } = require('../lib/up
 const dlCategories = require('../controllers/admin/adminDownloadCategoryController');
 const hideRules = require('../controllers/admin/adminHideRuleController');
 const discounts = require('../controllers/admin/adminDiscountController');
+const storeSettings = require('../controllers/admin/adminStoreSettingsController');
 
 const products = require('../controllers/admin/adminProductController');
 const categories = require('../controllers/admin/adminCategoryController');
@@ -69,6 +70,9 @@ router.delete('/shipping/:id', shipping.remove);
 // Shipping promo (free-shipping threshold)
 router.get('/shipping-promo', shipping.getPromo);
 router.put('/shipping-promo', validate(shipping.promoSchema), shipping.updatePromo);
+// Storefront settings (hero text)
+router.get('/store-settings', storeSettings.get);
+router.put('/store-settings', validate(storeSettings.updateSchema), storeSettings.update);
 
 // Payment method config
 router.get('/payments', payments.list);

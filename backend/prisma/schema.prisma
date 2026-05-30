@@ -271,6 +271,16 @@ model ShippingMethod {
   @@map("shipping_methods")
 }
 
+model StoreSettings {
+  id             Int      @id @default(autoincrement())
+  heroHeading    String?  @map("hero_heading") // may contain HTML (e.g. <br/>, <span class="cyan">…)
+  heroSubheading String?  @map("hero_subheading")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@map("store_settings")
+}
+
 model ShippingPromo {
   id                    Int      @id @default(autoincrement())
   freeShippingEnabled   Boolean  @default(true) @map("free_shipping_enabled")
@@ -393,6 +403,8 @@ model SftpSettings {
   // Affiliate gate shown before a customer download
   affLink         String? @map("aff_link")
   affDelaySeconds Int     @default(0) @map("aff_delay_seconds")
+  // Folder.jpg thumbnail display height (width is auto, preserves aspect)
+  folderThumbHeight Int   @default(48) @map("folder_thumb_height")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 

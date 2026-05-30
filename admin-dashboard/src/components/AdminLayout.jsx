@@ -3,6 +3,7 @@ import { useAuth } from '../auth';
 
 const LINKS = [
   ['/', 'DASHBOARD'],
+  ['/storefront', 'STOREFRONT'],
   ['/products', 'PRODUCTS'],
   ['/categories', 'CATEGORIES'],
   ['/orders', 'ORDERS'],

@@ -67,7 +67,16 @@ export default function Layout() {
   const navigate = useNavigate();
   const location = useLocation();
   const [search, setSearch] = useState('');
+  const [promo, setPromo] = useState({ enabled: false, threshold: 0 });
   const activeKey = activeNavKey(location.pathname, location.search);
+
+  useEffect(() => {
+    api.get('/shipping-methods').then((d) => setPromo(d.freeShipping || { enabled: false, threshold: 0 })).catch(() => {});
+  }, []);
+
+  const promoText = promo.enabled && promo.threshold > 0
+    ? `FREE SHIPPING ON ORDERS OVER ฿${Number(promo.threshold).toLocaleString()}`
+    : 'LVL UP YOUR INBOX FOR -15%';
 
   const submitSearch = (e) => {
     e.preventDefault();
@@ -80,7 +89,7 @@ export default function Layout() {
       <div className="topbar">
         <div className="left">
           <div className="ticker">
-            <span className="dot" />SHIPPING ONLINE · WORLDWIDE QUEST AVAILABLE · LVL UP YOUR INBOX FOR -15%
+            <span className="dot" />SHIPPING ONLINE · WORLDWIDE QUEST AVAILABLE · {promoText}
           </div>
         </div>
         <div className="right">

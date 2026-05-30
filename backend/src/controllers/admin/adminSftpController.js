@@ -14,6 +14,7 @@ const updateSchema = z.object({
   enabled: z.boolean().optional(),
   affLink: z.string().optional().or(z.literal('')),
   affDelaySeconds: z.coerce.number().int().min(0).max(120).default(0),
+  folderThumbHeight: z.coerce.number().int().min(16).max(400).default(48),
 });
 
 async function getRow() {
@@ -34,6 +35,7 @@ function publicSettings(row) {
     enabled: row.enabled,
     affLink: row.affLink || '',
     affDelaySeconds: row.affDelaySeconds || 0,
+    folderThumbHeight: row.folderThumbHeight || 48,
   };
 }
 
@@ -43,7 +45,7 @@ const get = asyncHandler(async (req, res) => {
 
 const update = asyncHandler(async (req, res) => {
   const row = await getRow();
-  const { protocol, host, port, username, password, basePath, enabled, affLink, affDelaySeconds } = req.body;
+  const { protocol, host, port, username, password, basePath, enabled, affLink, affDelaySeconds, folderThumbHeight } = req.body;
   const data = {
     protocol,
     host,
@@ -53,6 +55,7 @@ const update = asyncHandler(async (req, res) => {
     enabled: enabled ?? row.enabled,
     affLink: affLink !== undefined ? (affLink || null) : undefined,
     affDelaySeconds: affDelaySeconds ?? undefined,
+    folderThumbHeight: folderThumbHeight ?? undefined,
   };
   if (password) data.passwordEnc = encrypt(password);
   const saved = await prisma.sftpSettings.update({ where: { id: row.id }, data });

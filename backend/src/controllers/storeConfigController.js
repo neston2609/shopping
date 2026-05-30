@@ -45,4 +45,13 @@ const paymentMethods = asyncHandler(async (req, res) => {
   });
 });
 
-module.exports = { shippingMethods, paymentMethods };
+// GET /api/store-settings — hero heading + subheading for the storefront
+const storeSettings = asyncHandler(async (req, res) => {
+  const row = await prisma.storeSettings.findFirst({ orderBy: { id: 'asc' } });
+  res.json({
+    heroHeading: row?.heroHeading || '',
+    heroSubheading: row?.heroSubheading || '',
+  });
+});
+
+module.exports = { shippingMethods, paymentMethods, storeSettings };
