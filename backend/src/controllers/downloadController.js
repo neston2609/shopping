@@ -1,6 +1,6 @@
 const prisma = require('../lib/prisma');
 const { asyncHandler, badRequest, notFound } = require('../utils/http');
-const { listForCategory, streamFromCategory } = require('../lib/sftp');
+const { listForCategory, streamFromCategory, streamInline } = require('../lib/sftp');
 
 function publicCategory(c) {
   return {
@@ -71,4 +71,12 @@ const downloadFile = asyncHandler(async (req, res) => {
     .catch(() => {});
 });
 
-module.exports = { listCategories, browseCategory, downloadFile };
+// GET /api/downloads/:slug/thumb?path=<sub/folder.jpg>  — folder thumbnail (inline image)
+const thumbnail = asyncHandler(async (req, res) => {
+  const cat = await loadCategory(req.params.slug);
+  const sub = req.query.path;
+  if (!sub) throw badRequest('A path is required');
+  await streamInline(cat, sub, res);
+});
+
+module.exports = { listCategories, browseCategory, downloadFile, thumbnail };

@@ -165,18 +165,39 @@ async function listAbsolute(absPath) {
   }, { requireEnabled: false });
 }
 
-// Customer: list within a category's root path. Filters hidden patterns.
+// Check whether a directory contains folder.jpg (used as the folder thumb).
+async function findFolderThumb(ops, dirPath) {
+  try {
+    const st = await ops.stat(path.posix.join(dirPath, 'folder.jpg'));
+    if (!st.isDirectory) return 'folder.jpg';
+  } catch (e) {
+    /* not present */
+  }
+  return null;
+}
+
+// Customer: list within a category's root path. Filters hidden patterns and
+// attaches `thumb` (relative path to folder.jpg) for directories that have one.
 async function listForCategory(category, sub) {
   const hideRegexes = await getHideRules();
   return withClient(async (ops) => {
     const dir = safeResolve(category.sftpPath, sub);
     const entries = await ops.list(dir);
     const cleanSub = String(sub || '').replace(/^\/+|\/+$/g, '');
-    return entries
+    const visible = entries
       .filter((e) => !e.name.startsWith('.'))
-      .filter((e) => !isHidden(e.name, hideRegexes))
-      .map((e) => shape(cleanSub, e, false))
-      .sort((a, b) => (a.type === b.type ? a.name.localeCompare(b.name) : a.type === 'dir' ? -1 : 1));
+      .filter((e) => !isHidden(e.name, hideRegexes));
+    const out = [];
+    for (const e of visible) {
+      const shaped = shape(cleanSub, e, false);
+      if (e.type === 'dir') {
+        // single STAT round-trip per folder; ignored if folder.jpg isn't there
+        const thumbName = await findFolderThumb(ops, path.posix.join(dir, e.name));
+        if (thumbName) shaped.thumb = (cleanSub ? `${cleanSub}/` : '') + e.name + '/' + thumbName;
+      }
+      out.push(shaped);
+    }
+    return out.sort((a, b) => (a.type === b.type ? a.name.localeCompare(b.name) : a.type === 'dir' ? -1 : 1));
   });
 }
 
@@ -212,4 +233,24 @@ async function testConnection(settingsOverride, passwordOverride) {
   }, { settingsOverride: settingsOverride ? { ...settingsOverride, enabled: true } : null, passwordOverride, requireEnabled: !settingsOverride });
 }
 
-module.exports = { getConfig, listAbsolute, listForCategory, streamFromCategory, testConnection, safeResolve };
+// Customer: stream an image inline (no attachment), with cache headers.
+// Used for folder thumbnails.
+async function streamInline(category, sub, res) {
+  const hideRegexes = await getHideRules();
+  return withClient(async (ops) => {
+    const full = safeResolve(category.sftpPath, sub);
+    const segments = full.split('/').filter(Boolean);
+    if (segments.some((seg) => isHidden(seg, hideRegexes))) throw new ApiError(404, 'Not found');
+    const ext = path.posix.extname(full).toLowerCase();
+    const mime =
+      ext === '.png'  ? 'image/png'  :
+      ext === '.webp' ? 'image/webp' :
+      ext === '.gif'  ? 'image/gif'  :
+                        'image/jpeg';
+    res.setHeader('Content-Type', mime);
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+    await ops.streamTo(full, res);
+  });
+}
+
+module.exports = { getConfig, listAbsolute, listForCategory, streamFromCategory, streamInline, testConnection, safeResolve };

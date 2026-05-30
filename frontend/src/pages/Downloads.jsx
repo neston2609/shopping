@@ -159,11 +159,23 @@ function CategoryBrowser({ slug }) {
         ) : (
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <tbody>
-              {data.items.map((item) => (
+              {data.items.map((item) => {
+                const token = localStorage.getItem('rc_token') || '';
+                const thumbUrl = item.thumb
+                  ? `${API_BASE}/downloads/${slug}/thumb?path=${encodeURIComponent(item.thumb)}&token=${encodeURIComponent(token)}`
+                  : null;
+                return (
                 <tr key={item.path} style={{ borderBottom: '1px solid var(--line)' }}>
                   <td style={{ padding: '14px 8px' }}>
                     {item.type === 'dir' ? (
-                      <span style={{ cursor: 'pointer', color: 'var(--cyan)' }} onClick={() => setPath(item.path)}>📁 {item.name}/</span>
+                      <span style={{ cursor: 'pointer', color: 'var(--cyan)', display: 'inline-flex', alignItems: 'center', gap: 10 }} onClick={() => setPath(item.path)}>
+                        {thumbUrl ? (
+                          <img src={thumbUrl} alt="" style={{ width: 48, height: 48, objectFit: 'cover', border: '2px solid var(--line)' }} />
+                        ) : (
+                          <span style={{ fontSize: 22 }}>📁</span>
+                        )}
+                        <span>{item.name}/</span>
+                      </span>
                     ) : (
                       <span>🗎 {item.name}</span>
                     )}
@@ -179,7 +191,8 @@ function CategoryBrowser({ slug }) {
                     )}
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         )}
