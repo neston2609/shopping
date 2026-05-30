@@ -300,6 +300,96 @@ function Categories() {
   );
 }
 
+// ----- Hide rules (hide files/folders by name or wildcard) -----
+function HideRules() {
+  const [rules, setRules] = useState([]);
+  const [newPattern, setNewPattern] = useState('');
+  const [editingId, setEditingId] = useState(null);
+  const [editPattern, setEditPattern] = useState('');
+  const [msg, setMsg] = useState(null);
+
+  const load = () => api.get('/admin/download-hide-rules').then((d) => setRules(d.rules || []));
+  useEffect(() => { load(); }, []);
+
+  const add = async (e) => {
+    e.preventDefault();
+    if (!newPattern.trim()) return;
+    setMsg(null);
+    try {
+      await api.post('/admin/download-hide-rules', { pattern: newPattern.trim() });
+      setNewPattern('');
+      load();
+    } catch (err) { setMsg({ ok: false, text: err.message }); }
+  };
+
+  const save = async (id) => {
+    if (!editPattern.trim()) return;
+    setMsg(null);
+    try {
+      await api.put(`/admin/download-hide-rules/${id}`, { pattern: editPattern.trim(), enabled: true });
+      setEditingId(null);
+      load();
+    } catch (err) { setMsg({ ok: false, text: err.message }); }
+  };
+
+  const toggle = async (r) => {
+    await api.put(`/admin/download-hide-rules/${r.id}`, { pattern: r.pattern, enabled: !r.enabled });
+    load();
+  };
+
+  const remove = async (id) => {
+    if (!confirm('Remove this hide rule?')) return;
+    await api.del(`/admin/download-hide-rules/${id}`);
+    load();
+  };
+
+  return (
+    <div className="card" style={{ marginTop: 16 }}>
+      <div className="toprow" style={{ marginBottom: 8 }}>
+        <div className="px" style={{ fontSize: 12, color: 'var(--gold)' }}>HIDE RULES</div>
+      </div>
+      <div className="muted" style={{ marginBottom: 12 }}>
+        Patterns hide matching files <i>and</i> folders from customers. Use <code>*</code> as a wildcard.
+        Examples: <code>*.jpg</code>, <code>*.tmp</code>, <code>Thumbs.db</code>, <code>*backup*</code>, <code>__MACOSX</code>.
+      </div>
+      {msg && <div className={msg.ok ? 'success-msg' : 'error-msg'}>{msg.text}</div>}
+
+      <form onSubmit={add} style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+        <input style={{ flex: 1, padding: 10, background: '#0b0220', border: '3px solid #fff', color: '#fff' }} value={newPattern} onChange={(e) => setNewPattern(e.target.value)} placeholder="*.jpg or secret.txt or *backup*" />
+        <button className="btn btn--lime btn--sm" type="submit">+ ADD RULE</button>
+      </form>
+
+      <table>
+        <thead><tr><th>Pattern</th><th>Status</th><th></th></tr></thead>
+        <tbody>
+          {rules.map((r) => (
+            editingId === r.id ? (
+              <tr key={r.id}>
+                <td><input value={editPattern} onChange={(e) => setEditPattern(e.target.value)} autoFocus /></td>
+                <td><span className="badge active">ON</span></td>
+                <td className="row-actions">
+                  <button className="btn btn--lime btn--sm" onClick={() => save(r.id)}>SAVE</button>
+                  <button className="btn btn--ghost btn--sm" onClick={() => setEditingId(null)}>CANCEL</button>
+                </td>
+              </tr>
+            ) : (
+              <tr key={r.id}>
+                <td style={{ fontFamily: 'VT323, monospace', fontSize: 18 }}>{r.pattern}</td>
+                <td><span className={`badge ${r.enabled ? 'active' : 'inactive'}`} style={{ cursor: 'pointer' }} onClick={() => toggle(r)}>{r.enabled ? 'ON' : 'OFF'}</span></td>
+                <td className="row-actions">
+                  <button className="btn btn--cyan btn--sm" onClick={() => { setEditingId(r.id); setEditPattern(r.pattern); }}>EDIT</button>
+                  <button className="btn btn--sm" onClick={() => remove(r.id)}>DEL</button>
+                </td>
+              </tr>
+            )
+          ))}
+          {!rules.length && <tr><td colSpan={3} className="muted">No hide rules. Add one above to filter files / folders.</td></tr>}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 function RecentLogs() {
   const [logs, setLogs] = useState([]);
   useEffect(() => { api.get('/admin/downloads/logs').then((d) => setLogs(d.logs || [])); }, []);
@@ -334,6 +424,7 @@ export default function Downloads() {
       </div>
       <SftpForm />
       <Categories />
+      <HideRules />
       <RecentLogs />
     </>
   );

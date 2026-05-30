@@ -396,6 +396,17 @@ model DownloadCategory {
   @@map("download_categories")
 }
 
+model DownloadHideRule {
+  id        Int      @id @default(autoincrement())
+  pattern   String   // exact name or wildcard (e.g. "*.jpg", "*backup*", "Thumbs.db")
+  enabled   Boolean  @default(true)
+  position  Int      @default(0)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("download_hide_rules")
+}
+
 model DownloadLog {
   id        Int      @id @default(autoincrement())
   userId    Int?     @map("user_id")

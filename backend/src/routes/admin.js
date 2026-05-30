@@ -4,6 +4,7 @@ const { requireRole } = require('../middleware/rbac');
 const { validate } = require('../middleware/validate');
 const { qrUpload, categoryImageUpload } = require('../lib/upload');
 const dlCategories = require('../controllers/admin/adminDownloadCategoryController');
+const hideRules = require('../controllers/admin/adminHideRuleController');
 
 const products = require('../controllers/admin/adminProductController');
 const categories = require('../controllers/admin/adminCategoryController');
@@ -78,6 +79,10 @@ router.post('/download-categories', validate(dlCategories.upsertSchema), dlCateg
 router.put('/download-categories/:id', validate(dlCategories.upsertSchema), dlCategories.update);
 router.delete('/download-categories/:id', dlCategories.remove);
 router.post('/download-categories/:id/image', categoryImageUpload.single('image'), dlCategories.uploadImage);
+router.get('/download-hide-rules', hideRules.list);
+router.post('/download-hide-rules', validate(hideRules.upsertSchema), hideRules.create);
+router.put('/download-hide-rules/:id', validate(hideRules.upsertSchema), hideRules.update);
+router.delete('/download-hide-rules/:id', hideRules.remove);
 
 // Email templates
 router.get('/templates', templates.list);

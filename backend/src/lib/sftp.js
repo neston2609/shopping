@@ -10,6 +10,22 @@ async function getConfig() {
   return prisma.sftpSettings.findFirst({ orderBy: { id: 'asc' } });
 }
 
+// ----- Hide rules: convert glob pattern (* and ?) to a case-insensitive regex.
+function patternToRegex(pattern) {
+  const escaped = String(pattern).replace(/[.+^${}()|[\]\\]/g, '\\$&');
+  const glob = escaped.replace(/\*/g, '.*').replace(/\?/g, '.');
+  return new RegExp(`^${glob}$`, 'i');
+}
+
+async function getHideRules() {
+  const rules = await prisma.downloadHideRule.findMany({ where: { enabled: true }, orderBy: { id: 'asc' } });
+  return rules.map((r) => patternToRegex(r.pattern));
+}
+
+function isHidden(name, regexes) {
+  return regexes.some((r) => r.test(name));
+}
+
 // Resolve a client-supplied sub-path under a configured root path.
 // Rejects ".." traversal and any escape outside the root.
 function safeResolve(rootPath, sub) {
@@ -149,23 +165,32 @@ async function listAbsolute(absPath) {
   }, { requireEnabled: false });
 }
 
-// Customer: list within a category's root path.
+// Customer: list within a category's root path. Filters hidden patterns.
 async function listForCategory(category, sub) {
+  const hideRegexes = await getHideRules();
   return withClient(async (ops) => {
     const dir = safeResolve(category.sftpPath, sub);
     const entries = await ops.list(dir);
     const cleanSub = String(sub || '').replace(/^\/+|\/+$/g, '');
     return entries
       .filter((e) => !e.name.startsWith('.'))
+      .filter((e) => !isHidden(e.name, hideRegexes))
       .map((e) => shape(cleanSub, e, false))
       .sort((a, b) => (a.type === b.type ? a.name.localeCompare(b.name) : a.type === 'dir' ? -1 : 1));
   });
 }
 
-// Customer: stream a file from a category's root path.
+// Customer: stream a file from a category's root path. Hidden patterns 404.
 async function streamFromCategory(category, sub, res) {
+  const hideRegexes = await getHideRules();
   return withClient(async (ops) => {
     const full = safeResolve(category.sftpPath, sub);
+    // Reject if any segment of the path matches a hide rule (so users can't
+    // bypass by knowing the exact path of a hidden file or its parent folder).
+    const segments = full.split('/').filter(Boolean);
+    if (segments.some((seg) => isHidden(seg, hideRegexes))) {
+      throw new ApiError(404, 'File not found');
+    }
     const st = await ops.stat(full);
     if (st.isDirectory) throw new ApiError(400, 'Not a file');
     const name = path.posix.basename(full);
