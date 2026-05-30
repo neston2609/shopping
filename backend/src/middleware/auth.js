@@ -6,6 +6,9 @@ function extractToken(req) {
   const header = req.headers.authorization;
   if (header && header.startsWith('Bearer ')) return header.slice(7);
   if (req.cookies && req.cookies.token) return req.cookies.token;
+  // Allow token via query string for direct download links (no way to attach
+  // an Authorization header to an <a download> click). JWT has its own expiry.
+  if (req.query && req.query.token) return String(req.query.token);
   return null;
 }
 

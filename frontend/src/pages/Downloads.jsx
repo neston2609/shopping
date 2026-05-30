@@ -79,30 +79,19 @@ function CategoryBrowser({ slug }) {
       .finally(() => setLoading(false));
   }, [slug, path]);
 
-  const downloadFile = async (item) => {
-    setBusy(item.path);
+  // Direct-link download: streams straight from the server to the browser's
+  // save dialog (no in-memory blob), so large files don't hang or OOM.
+  const downloadFile = (item) => {
     setError('');
-    try {
-      const token = localStorage.getItem('rc_token');
-      const res = await fetch(`${API_BASE}/downloads/${slug}/file?path=${encodeURIComponent(item.path)}`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-        credentials: 'include',
-      });
-      if (!res.ok) {
-        let msg = `Download failed (${res.status})`;
-        try { msg = (await res.json()).error || msg; } catch (e) { /* */ }
-        throw new Error(msg);
-      }
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url; a.download = item.name; document.body.appendChild(a); a.click(); a.remove();
-      URL.revokeObjectURL(url);
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setBusy(null);
-    }
+    const token = localStorage.getItem('rc_token') || '';
+    const url = `${API_BASE}/downloads/${slug}/file?path=${encodeURIComponent(item.path)}&token=${encodeURIComponent(token)}`;
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = item.name;
+    a.rel = 'noopener';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
   };
 
   const segments = path.split('/').filter(Boolean);
