@@ -31,14 +31,28 @@ async function loadCartLines(cartId) {
 async function computeTotals(cartId, shippingMethodId) {
   const items = await loadCartLines(cartId);
   const subtotal = items.reduce((s, it) => s + priceOf(it.product) * it.quantity, 0);
-  let shippingFee = 0;
+
+  // Resolve the default ("system") shipping fee from the chosen method.
+  let methodFee = 0;
   let shippingMethod = null;
   if (shippingMethodId) {
     shippingMethod = await prisma.shippingMethod.findUnique({ where: { id: shippingMethodId } });
-    if (shippingMethod && shippingMethod.enabled) shippingFee = Number(shippingMethod.fee);
+    if (shippingMethod && shippingMethod.enabled) methodFee = Number(shippingMethod.fee);
   }
-  // Free shipping over $50 (matches storefront copy).
+
+  // Per-product shipping: each item uses its own shippingFee if set, else the
+  // system method fee. We charge the MAX across items (not the sum) — so a
+  // multi-item order pays only the most expensive shipping line.
+  let shippingFee = 0;
+  if (items.length) {
+    const itemFees = items.map((it) =>
+      it.product.shippingFee != null ? Number(it.product.shippingFee) : methodFee
+    );
+    shippingFee = Math.max(0, ...itemFees);
+  }
+  // Free shipping over ฿50 (matches storefront copy).
   if (subtotal >= 50) shippingFee = 0;
+
   const total = subtotal + shippingFee;
   return {
     items,

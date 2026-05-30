@@ -10,6 +10,7 @@ function serialize(p) {
     sku: p.sku,
     price: Number(p.price),
     discountPrice: p.discountPrice != null ? Number(p.discountPrice) : null,
+    shippingFee: p.shippingFee != null ? Number(p.shippingFee) : null,
     stock: p.stock,
     status: p.status,
     rarity: p.rarity,

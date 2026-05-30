@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../api';
 
 const BLANK = {
-  name: '', sku: '', description: '', price: '', discountPrice: '', stock: 0,
+  name: '', sku: '', description: '', price: '', discountPrice: '', shippingFee: '', stock: 0,
   status: 'active', rarity: 'common', platform: '', artVariant: 'cart-mag', categoryId: '',
   images: [], attributes: [],
 };
@@ -14,6 +14,7 @@ function ProductForm({ initial, categories, onClose, onSaved }) {
     ...initial,
     price: initial?.price ?? '',
     discountPrice: initial?.discountPrice ?? '',
+    shippingFee: initial?.shippingFee ?? '',
     categoryId: initial?.category?.id ?? '',
     images: initial?.images?.map((i) => ({ url: i.url, alt: i.alt || '', position: i.position || 0 })) || [],
     attributes: initial?.attributes?.map((a) => ({ name: a.name, value: a.value })) || [],
@@ -48,6 +49,7 @@ function ProductForm({ initial, categories, onClose, onSaved }) {
       description: form.description || undefined,
       price: Number(form.price),
       discountPrice: form.discountPrice === '' ? null : Number(form.discountPrice),
+      shippingFee: form.shippingFee === '' ? null : Number(form.shippingFee),
       stock: Number(form.stock),
       status: form.status,
       rarity: form.rarity,
@@ -88,6 +90,10 @@ function ProductForm({ initial, categories, onClose, onSaved }) {
           <div className="field"><label>PRICE *</label><input type="number" step="0.01" value={form.price} onChange={set('price')} required /></div>
           <div className="field"><label>DISCOUNT PRICE</label><input type="number" step="0.01" value={form.discountPrice} onChange={set('discountPrice')} /></div>
           <div className="field"><label>STOCK</label><input type="number" value={form.stock} onChange={set('stock')} /></div>
+        </div>
+        <div className="field">
+          <label>SHIPPING FEE (฿) — leave blank to use the system shipping method's fee</label>
+          <input type="number" step="0.01" min="0" value={form.shippingFee} onChange={set('shippingFee')} placeholder="(uses default shipping method)" />
         </div>
         <div className="grid3">
           <div className="field"><label>STATUS</label><select value={form.status} onChange={set('status')}><option value="active">active</option><option value="inactive">inactive</option></select></div>

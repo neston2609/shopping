@@ -81,6 +81,7 @@ model Product {
   sku           String   @unique
   price         Decimal  @db.Decimal(10, 2)
   discountPrice Decimal? @map("discount_price") @db.Decimal(10, 2)
+  shippingFee   Decimal? @map("shipping_fee") @db.Decimal(10, 2)
   stock         Int      @default(0)
   status        String   @default("active") // active | inactive
   rarity        String   @default("common") // common | rare | epic | legendary
