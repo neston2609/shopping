@@ -2,7 +2,8 @@ const express = require('express');
 const { authenticate } = require('../middleware/auth');
 const { requireRole } = require('../middleware/rbac');
 const { validate } = require('../middleware/validate');
-const { qrUpload } = require('../lib/upload');
+const { qrUpload, categoryImageUpload } = require('../lib/upload');
+const dlCategories = require('../controllers/admin/adminDownloadCategoryController');
 
 const products = require('../controllers/admin/adminProductController');
 const categories = require('../controllers/admin/adminCategoryController');
@@ -70,7 +71,13 @@ router.post('/smtp/test-email', validate(smtp.testSchema), smtp.sendTestEmail);
 router.get('/sftp', sftp.get);
 router.put('/sftp', validate(sftp.updateSchema), sftp.update);
 router.post('/sftp/test', sftp.test);
+router.get('/sftp/browse', sftp.browse);
 router.get('/downloads/logs', sftp.listLogs);
+router.get('/download-categories', dlCategories.list);
+router.post('/download-categories', validate(dlCategories.upsertSchema), dlCategories.create);
+router.put('/download-categories/:id', validate(dlCategories.upsertSchema), dlCategories.update);
+router.delete('/download-categories/:id', dlCategories.remove);
+router.post('/download-categories/:id/image', categoryImageUpload.single('image'), dlCategories.uploadImage);
 
 // Email templates
 router.get('/templates', templates.list);

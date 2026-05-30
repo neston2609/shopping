@@ -1,25 +1,56 @@
 const prisma = require('../lib/prisma');
-const { asyncHandler, badRequest } = require('../utils/http');
-const { listDir, streamFile } = require('../lib/sftp');
+const { asyncHandler, badRequest, notFound } = require('../utils/http');
+const { listForCategory, streamFromCategory } = require('../lib/sftp');
 
-// GET /api/downloads?path=<subpath>  — list a folder under the configured base path
-const browse = asyncHandler(async (req, res) => {
-  const sub = req.query.path || '';
-  const items = await listDir(sub);
-  res.json({ path: String(sub).replace(/^\/+|\/+$/g, ''), items });
+function publicCategory(c) {
+  return {
+    id: c.id,
+    name: c.name,
+    slug: c.slug,
+    description: c.description,
+    imageUrl: c.imageUrl,
+    position: c.position,
+  };
+}
+
+// GET /api/downloads — list enabled download categories
+const listCategories = asyncHandler(async (req, res) => {
+  const cats = await prisma.downloadCategory.findMany({
+    where: { enabled: true },
+    orderBy: [{ position: 'asc' }, { name: 'asc' }],
+  });
+  res.json({ categories: cats.map(publicCategory) });
 });
 
-// GET /api/downloads/file?path=<subpath/file>  — stream a file as an attachment
-const download = asyncHandler(async (req, res) => {
+async function loadCategory(slug) {
+  const cat = await prisma.downloadCategory.findUnique({ where: { slug } });
+  if (!cat || !cat.enabled) throw notFound('Category not found');
+  return cat;
+}
+
+// GET /api/downloads/:slug?path=<sub>  — browse files/subfolders within a category
+const browseCategory = asyncHandler(async (req, res) => {
+  const cat = await loadCategory(req.params.slug);
+  const sub = req.query.path || '';
+  const items = await listForCategory(cat, sub);
+  res.json({
+    category: publicCategory(cat),
+    path: String(sub).replace(/^\/+|\/+$/g, ''),
+    items,
+  });
+});
+
+// GET /api/downloads/:slug/file?path=<sub>  — stream a file from a category
+const downloadFile = asyncHandler(async (req, res) => {
+  const cat = await loadCategory(req.params.slug);
   const sub = req.query.path;
   if (!sub) throw badRequest('A file path is required');
-  const info = await streamFile(sub, res);
-  // Best-effort audit log (response is already streamed at this point).
+  const info = await streamFromCategory(cat, sub, res);
   prisma.downloadLog
     .create({
       data: {
         userId: req.user?.id || null,
-        path: String(sub),
+        path: `${cat.slug}/${sub}`,
         fileName: info.name,
         sizeBytes: info.size ? Number(info.size) : null,
         ip: req.ip,
@@ -28,4 +59,4 @@ const download = asyncHandler(async (req, res) => {
     .catch(() => {});
 });
 
-module.exports = { browse, download };
+module.exports = { listCategories, browseCategory, downloadFile };

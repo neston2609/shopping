@@ -377,6 +377,21 @@ model SftpSettings {
   @@map("sftp_settings")
 }
 
+model DownloadCategory {
+  id          Int      @id @default(autoincrement())
+  name        String
+  slug        String   @unique
+  description String?
+  imageUrl    String?  @map("image_url")
+  sftpPath    String   @map("sftp_path") // absolute path on the SFTP server
+  enabled     Boolean  @default(true)
+  position    Int      @default(0)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("download_categories")
+}
+
 model DownloadLog {
   id        Int      @id @default(autoincrement())
   userId    Int?     @map("user_id")

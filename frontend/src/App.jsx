@@ -30,6 +30,7 @@ export default function App() {
               <Route path="/register" element={<Register />} />
               <Route path="/account" element={<Account />} />
               <Route path="/downloads" element={<Downloads />} />
+              <Route path="/downloads/:slug" element={<Downloads />} />
             </Route>
           </Routes>
         </CartProvider>

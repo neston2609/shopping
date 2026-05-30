@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, Link, useParams } from 'react-router-dom';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 
@@ -7,66 +7,96 @@ const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
 function fmtSize(n) {
   if (n == null) return '';
-  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const u = ['B', 'KB', 'MB', 'GB', 'TB'];
   let x = Number(n);
   let i = 0;
-  while (x >= 1024 && i < units.length - 1) {
+  while (x >= 1024 && i < u.length - 1) {
     x /= 1024;
     i += 1;
   }
-  return `${x.toFixed(i ? 1 : 0)} ${units[i]}`;
+  return `${x.toFixed(i ? 1 : 0)} ${u[i]}`;
 }
 
-export default function Downloads() {
-  const { user, loading: authLoading } = useAuth();
+// ----- Category grid (root of /downloads) -----
+function CategoryGrid() {
+  const [cats, setCats] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    api.get('/downloads').then((d) => setCats(d.categories || [])).catch((e) => setError(e.message)).finally(() => setLoading(false));
+  }, []);
+
+  return (
+    <div className="container">
+      <h1 className="page-title">▶ DOWNLOADS</h1>
+      <div className="muted">Pick a category to browse files.</div>
+      {error && <div className="error-msg">{error}</div>}
+      {loading ? (
+        <div className="loading">LOADING…</div>
+      ) : cats.length === 0 ? (
+        <div className="empty-state">No download categories available yet.</div>
+      ) : (
+        <div className="cats" style={{ marginTop: 24 }}>
+          {cats.map((c) => (
+            <Link className="cat" key={c.id} to={`/downloads/${c.slug}`}>
+              <div className="top" style={c.imageUrl ? { background: `url(${c.imageUrl}) center/cover` } : undefined}>
+                {!c.imageUrl && (
+                  <div className="glyph">
+                    <div className="glyphlbl">{(c.name.split(' ')[0] || 'FILES').slice(0, 6).toUpperCase()}</div>
+                  </div>
+                )}
+              </div>
+              <div className="body">
+                <div className="name">{c.name.toUpperCase()}</div>
+                <div className="meta">
+                  <span>{c.description || 'files'}</span>
+                </div>
+              </div>
+            </Link>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ----- Category browser (/downloads/:slug) -----
+function CategoryBrowser({ slug }) {
   const [path, setPath] = useState('');
-  const [data, setData] = useState({ items: [] });
+  const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(null);
 
   useEffect(() => {
-    if (!user) return;
     setLoading(true);
     setError('');
     api
-      .get(`/downloads?path=${encodeURIComponent(path)}`)
+      .get(`/downloads/${slug}?path=${encodeURIComponent(path)}`)
       .then((d) => setData(d))
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
-  }, [path, user]);
-
-  if (authLoading) return <div className="loading">LOADING…</div>;
-  if (!user) return <Navigate to="/login" state={{ from: '/downloads' }} replace />;
-
-  const segments = path.split('/').filter(Boolean);
+  }, [slug, path]);
 
   const downloadFile = async (item) => {
     setBusy(item.path);
     setError('');
     try {
       const token = localStorage.getItem('rc_token');
-      const res = await fetch(`${API_BASE}/downloads/file?path=${encodeURIComponent(item.path)}`, {
+      const res = await fetch(`${API_BASE}/downloads/${slug}/file?path=${encodeURIComponent(item.path)}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
         credentials: 'include',
       });
       if (!res.ok) {
         let msg = `Download failed (${res.status})`;
-        try {
-          msg = (await res.json()).error || msg;
-        } catch (e) {
-          /* non-json */
-        }
+        try { msg = (await res.json()).error || msg; } catch (e) { /* */ }
         throw new Error(msg);
       }
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href = url;
-      a.download = item.name;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
+      a.href = url; a.download = item.name; document.body.appendChild(a); a.click(); a.remove();
       URL.revokeObjectURL(url);
     } catch (e) {
       setError(e.message);
@@ -75,14 +105,16 @@ export default function Downloads() {
     }
   };
 
+  const segments = path.split('/').filter(Boolean);
+
   return (
     <div className="container">
-      <h1 className="page-title">▶ DOWNLOADS</h1>
-      <div className="muted">Files for RC81 players. Browse folders and grab what you need.</div>
+      <h1 className="page-title">▶ DOWNLOADS {data?.category ? `// ${data.category.name.toUpperCase()}` : ''}</h1>
+      <div className="muted">{data?.category?.description}</div>
 
-      {/* breadcrumb */}
       <div className="steps" style={{ marginTop: 18 }}>
-        <span className={`s ${path === '' ? 'on' : ''}`} style={{ cursor: 'pointer' }} onClick={() => setPath('')}>▸ HOME</span>
+        <Link className="s" to="/downloads">▸ ALL CATEGORIES</Link>
+        <span className={`s ${path === '' ? 'on' : ''}`} style={{ cursor: 'pointer' }} onClick={() => setPath('')}>{data?.category?.name?.toUpperCase() || 'ROOT'}</span>
         {segments.map((seg, i) => {
           const target = segments.slice(0, i + 1).join('/');
           return (
@@ -98,7 +130,7 @@ export default function Downloads() {
       <div className="panel-box" style={{ marginTop: 16 }}>
         {loading ? (
           <div className="loading">LOADING FILES…</div>
-        ) : data.items.length === 0 ? (
+        ) : !data || data.items.length === 0 ? (
           <div className="empty-state">This folder is empty.</div>
         ) : (
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -107,9 +139,7 @@ export default function Downloads() {
                 <tr key={item.path} style={{ borderBottom: '1px solid var(--line)' }}>
                   <td style={{ padding: '14px 8px' }}>
                     {item.type === 'dir' ? (
-                      <span style={{ cursor: 'pointer', color: 'var(--cyan)' }} onClick={() => setPath(item.path)}>
-                        📁 {item.name}/
-                      </span>
+                      <span style={{ cursor: 'pointer', color: 'var(--cyan)' }} onClick={() => setPath(item.path)}>📁 {item.name}/</span>
                     ) : (
                       <span>🗎 {item.name}</span>
                     )}
@@ -134,4 +164,12 @@ export default function Downloads() {
       </div>
     </div>
   );
+}
+
+export default function Downloads() {
+  const { user, loading: authLoading } = useAuth();
+  const { slug } = useParams();
+  if (authLoading) return <div className="loading">LOADING…</div>;
+  if (!user) return <Navigate to="/login" state={{ from: '/downloads' }} replace />;
+  return slug ? <CategoryBrowser slug={slug} /> : <CategoryGrid />;
 }

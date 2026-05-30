@@ -2,7 +2,7 @@ const { z } = require('zod');
 const prisma = require('../../lib/prisma');
 const { asyncHandler, badRequest } = require('../../utils/http');
 const { encrypt } = require('../../lib/crypto');
-const { testConnection } = require('../../lib/sftp');
+const { testConnection, listAbsolute } = require('../../lib/sftp');
 
 const updateSchema = z.object({
   host: z.string().min(1),
@@ -50,9 +50,25 @@ const test = asyncHandler(async (req, res) => {
   if (!row.host || !row.username) throw badRequest('Set host + username (and save) before testing');
   try {
     const r = await testConnection(row);
-    res.json({ ok: true, message: `Connected — ${r.entries} item(s) at base path.` });
+    res.json({
+      ok: true,
+      message: `Connected — ${r.total} item(s) at ${r.dir}`,
+      dir: r.dir,
+      total: r.total,
+      sample: r.sample,
+    });
   } catch (e) {
     res.json({ ok: false, message: e.message }); // 200 so the client reads the message
+  }
+});
+
+// GET /api/admin/sftp/browse?path=<abs>  — folder picker (lists any path on the SFTP server)
+const browse = asyncHandler(async (req, res) => {
+  try {
+    const result = await listAbsolute(req.query.path);
+    res.json({ ok: true, ...result });
+  } catch (e) {
+    res.json({ ok: false, message: e.message });
   }
 });
 
@@ -76,4 +92,4 @@ const listLogs = asyncHandler(async (req, res) => {
   });
 });
 
-module.exports = { get, update, test, listLogs, updateSchema };
+module.exports = { get, update, test, browse, listLogs, updateSchema };
