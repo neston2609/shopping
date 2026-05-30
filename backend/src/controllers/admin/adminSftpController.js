@@ -5,6 +5,7 @@ const { encrypt } = require('../../lib/crypto');
 const { testConnection, listAbsolute } = require('../../lib/sftp');
 
 const updateSchema = z.object({
+  protocol: z.enum(['sftp', 'ftp', 'ftps']).default('sftp'),
   host: z.string().min(1),
   port: z.coerce.number().int().positive().default(22),
   username: z.string().min(1),
@@ -22,6 +23,7 @@ async function getRow() {
 function publicSettings(row) {
   return {
     id: row.id,
+    protocol: row.protocol || 'sftp',
     host: row.host || '',
     port: row.port,
     username: row.username || '',
@@ -37,8 +39,8 @@ const get = asyncHandler(async (req, res) => {
 
 const update = asyncHandler(async (req, res) => {
   const row = await getRow();
-  const { host, port, username, password, basePath, enabled } = req.body;
-  const data = { host, port, username, basePath, enabled: enabled ?? row.enabled };
+  const { protocol, host, port, username, password, basePath, enabled } = req.body;
+  const data = { protocol, host, port, username, basePath, enabled: enabled ?? row.enabled };
   if (password) data.passwordEnc = encrypt(password);
   const saved = await prisma.sftpSettings.update({ where: { id: row.id }, data });
   res.json({ settings: publicSettings(saved) });

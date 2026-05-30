@@ -33,7 +33,7 @@ function SftpForm({ onSaved }) {
   const save = async (e) => {
     e.preventDefault();
     setMsg(null);
-    const payload = { host: form.host, port: Number(form.port), username: form.username, basePath: form.basePath, enabled: form.enabled };
+    const payload = { protocol: form.protocol || 'sftp', host: form.host, port: Number(form.port), username: form.username, basePath: form.basePath, enabled: form.enabled };
     if (form.password) payload.password = form.password;
     try {
       await api.put('/admin/sftp', payload);
@@ -65,6 +65,17 @@ function SftpForm({ onSaved }) {
         <label className="toggle" style={{ marginBottom: 14 }}>
           <input type="checkbox" checked={form.enabled} onChange={set('enabled')} /> DOWNLOADS ENABLED
         </label>
+        <div className="field">
+          <label>PROTOCOL</label>
+          <div style={{ display: 'flex', gap: 18 }}>
+            {['sftp', 'ftp', 'ftps'].map((p) => (
+              <label key={p} style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+                <input type="radio" name="protocol" value={p} checked={(form.protocol || 'sftp') === p} onChange={() => setForm((f) => ({ ...f, protocol: p, port: f.port || (p === 'sftp' ? 22 : 21) }))} />
+                <span style={{ textTransform: 'uppercase', fontFamily: 'Press Start 2P, monospace', fontSize: 10 }}>{p}</span>
+              </label>
+            ))}
+          </div>
+        </div>
         <div className="grid2">
           <div className="field"><label>SFTP HOST</label><input value={form.host} onChange={set('host')} placeholder="files.example.com" /></div>
           <div className="field"><label>PORT</label><input type="number" value={form.port} onChange={set('port')} /></div>
