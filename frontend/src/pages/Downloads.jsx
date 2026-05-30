@@ -64,7 +64,7 @@ function CategoryGrid() {
 // ----- Folder thumbnail: explicitly computes width from the loaded image's
 // natural aspect ratio, so width is guaranteed to scale with admin-configured height.
 function FolderThumb({ src, height }) {
-  const [size, setSize] = useState({ w: height, h: height });
+  const [w, setW] = useState(null); // null until natural dimensions are known
   return (
     <img
       src={src}
@@ -72,16 +72,16 @@ function FolderThumb({ src, height }) {
       onLoad={(e) => {
         const t = e.target;
         if (t.naturalWidth && t.naturalHeight) {
-          setSize({ w: Math.round((height * t.naturalWidth) / t.naturalHeight), h: height });
+          setW(Math.round((height * t.naturalWidth) / t.naturalHeight));
         }
       }}
       style={{
-        height: size.h,
-        width: size.w,
+        height,
+        width: w == null ? 'auto' : w,
+        maxWidth: 'none',
         flexShrink: 0,
         display: 'block',
         border: '2px solid var(--line)',
-        objectFit: 'contain',
       }}
     />
   );
