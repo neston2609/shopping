@@ -62,6 +62,11 @@ function SftpForm({ onSaved }) {
   return (
     <>
       <form className="card" onSubmit={save} style={{ maxWidth: 760 }}>
+        {!form.enabled && form.host && form.username && (
+          <div className="error-msg" style={{ marginBottom: 14 }}>
+            ⚠ Connection is configured but <b>DOWNLOADS ENABLED</b> is off — customers will see "Downloads are currently disabled". Tick the box below and SAVE.
+          </div>
+        )}
         <label className="toggle" style={{ marginBottom: 14 }}>
           <input type="checkbox" checked={form.enabled} onChange={set('enabled')} /> DOWNLOADS ENABLED
         </label>

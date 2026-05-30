@@ -112,7 +112,7 @@ async function runFtp(row, secure, passwordOverride, fn) {
 async function withClient(fn, { settingsOverride, passwordOverride, requireEnabled = true } = {}) {
   const row = settingsOverride || (await getConfig());
   if (!row) throw new ApiError(503, 'Remote downloads are not configured');
-  if (requireEnabled && !row.enabled) throw new ApiError(503, 'Remote downloads are not enabled');
+  if (requireEnabled && !row.enabled) throw new ApiError(503, 'Downloads are currently disabled by the administrator');
   if (!row.host || !row.username) throw new ApiError(503, 'Host/username not set');
 
   const proto = (row.protocol || 'sftp').toLowerCase();
