@@ -61,6 +61,32 @@ function CategoryGrid() {
   );
 }
 
+// ----- Folder thumbnail: explicitly computes width from the loaded image's
+// natural aspect ratio, so width is guaranteed to scale with admin-configured height.
+function FolderThumb({ src, height }) {
+  const [size, setSize] = useState({ w: height, h: height });
+  return (
+    <img
+      src={src}
+      alt=""
+      onLoad={(e) => {
+        const t = e.target;
+        if (t.naturalWidth && t.naturalHeight) {
+          setSize({ w: Math.round((height * t.naturalWidth) / t.naturalHeight), h: height });
+        }
+      }}
+      style={{
+        height: size.h,
+        width: size.w,
+        flexShrink: 0,
+        display: 'block',
+        border: '2px solid var(--line)',
+        objectFit: 'contain',
+      }}
+    />
+  );
+}
+
 // ----- Countdown gate modal -----
 function AffCountdown({ item, seconds, slug, onClose }) {
   const [left, setLeft] = useState(seconds);
@@ -170,18 +196,7 @@ function CategoryBrowser({ slug }) {
                     {item.type === 'dir' ? (
                       <span style={{ cursor: 'pointer', color: 'var(--cyan)', display: 'inline-flex', alignItems: 'center', gap: 10 }} onClick={() => setPath(item.path)}>
                         {thumbUrl ? (
-                          <img
-                            src={thumbUrl}
-                            alt=""
-                            style={{
-                              height: data.display?.folderThumbHeight || 48,
-                              width: 'auto',
-                              maxWidth: 'none',
-                              flexShrink: 0,
-                              display: 'block',
-                              border: '2px solid var(--line)',
-                            }}
-                          />
+                          <FolderThumb src={thumbUrl} height={data.display?.folderThumbHeight || 48} />
                         ) : (
                           <span style={{ fontSize: 22 }}>📁</span>
                         )}
