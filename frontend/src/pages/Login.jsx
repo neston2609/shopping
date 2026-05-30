@@ -6,7 +6,7 @@ export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -16,7 +16,7 @@ export default function Login() {
     setError('');
     setBusy(true);
     try {
-      await login(email, password);
+      await login(identifier.trim(), password);
       navigate(location.state?.from || '/account');
     } catch (err) {
       setError(err.message);
@@ -32,7 +32,7 @@ export default function Login() {
         <div className="muted">Sign in to load your save file.</div>
         {error && <div className="error-msg">{error}</div>}
         <form onSubmit={submit}>
-          <div className="field"><label>EMAIL</label><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required /></div>
+          <div className="field"><label>EMAIL OR USERNAME</label><input value={identifier} onChange={(e) => setIdentifier(e.target.value)} required autoComplete="username" /></div>
           <div className="field"><label>PASSWORD</label><input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required /></div>
           <button className="btn btn--lime" style={{ width: '100%', marginTop: 18 }} disabled={busy}>{busy ? 'LOADING…' : '▶ SIGN IN'}</button>
         </form>

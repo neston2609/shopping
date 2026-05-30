@@ -10,5 +10,6 @@ router.post('/login', validate(ctrl.loginSchema), ctrl.login);
 router.post('/logout', ctrl.logout);
 router.get('/me', authenticate, ctrl.me);
 router.patch('/profile', authenticate, validate(ctrl.profileSchema), ctrl.updateProfile);
+router.patch('/credentials', authenticate, validate(ctrl.credentialsSchema), ctrl.updateCredentials);
 
 module.exports = router;

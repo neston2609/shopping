@@ -18,8 +18,8 @@ export function AuthProvider({ children }) {
       .finally(() => setLoading(false));
   }, []);
 
-  const login = async (email, password) => {
-    const { token, user } = await api.post('/auth/login', { email, password });
+  const login = async (identifier, password) => {
+    const { token, user } = await api.post('/auth/login', { identifier, password });
     if (user.role !== 'admin') {
       throw new Error('This account is not an administrator.');
     }
@@ -33,7 +33,13 @@ export function AuthProvider({ children }) {
     setUser(null);
   };
 
-  return <AuthCtx.Provider value={{ user, loading, login, logout }}>{children}</AuthCtx.Provider>;
+  const updateCredentials = async (payload) => {
+    const { user } = await api.patch('/auth/credentials', payload);
+    setUser(user);
+    return user;
+  };
+
+  return <AuthCtx.Provider value={{ user, loading, login, logout, updateCredentials }}>{children}</AuthCtx.Provider>;
 }
 
 export const useAuth = () => useContext(AuthCtx);

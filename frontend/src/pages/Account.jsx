@@ -75,7 +75,7 @@ function Addresses() {
 }
 
 function Profile() {
-  const { user, updateProfile } = useAuth();
+  const { user, updateProfile, updateCredentials } = useAuth();
   const [form, setForm] = useState({ firstName: user.firstName || '', lastName: user.lastName || '', phone: user.phone || '' });
   const [saved, setSaved] = useState(false);
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
@@ -85,16 +85,51 @@ function Profile() {
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   };
+
+  const [cred, setCred] = useState({ currentPassword: '', newEmail: '', newUsername: '', newPassword: '' });
+  const [credMsg, setCredMsg] = useState(null);
+  const setC = (k) => (e) => setCred((c) => ({ ...c, [k]: e.target.value }));
+  const saveCreds = async (e) => {
+    e.preventDefault();
+    setCredMsg(null);
+    try {
+      const payload = { currentPassword: cred.currentPassword };
+      if (cred.newEmail) payload.newEmail = cred.newEmail.trim();
+      if (cred.newUsername !== '') payload.newUsername = cred.newUsername.trim();
+      if (cred.newPassword) payload.newPassword = cred.newPassword;
+      await updateCredentials(payload);
+      setCred({ currentPassword: '', newEmail: '', newUsername: '', newPassword: '' });
+      setCredMsg({ ok: true, text: 'Credentials updated.' });
+    } catch (err) {
+      setCredMsg({ ok: false, text: err.details ? err.details.map((d) => d.message).join('; ') : err.message });
+    }
+  };
+
   return (
-    <form className="panel-box" onSubmit={save} style={{ maxWidth: 520 }}>
-      {saved && <div className="success-msg">Profile saved.</div>}
-      <div className="field"><label>EMAIL</label><input value={user.email} disabled /></div>
-      <div className="field"><label>FIRST NAME</label><input value={form.firstName} onChange={set('firstName')} /></div>
-      <div className="field"><label>LAST NAME</label><input value={form.lastName} onChange={set('lastName')} /></div>
-      <div className="field"><label>PHONE</label><input value={form.phone} onChange={set('phone')} /></div>
-      <div className="muted" style={{ marginTop: 12 }}>Pixel coins: <b style={{ color: 'var(--gold)' }}>{user.coins}</b></div>
-      <button className="btn btn--lime" style={{ width: '100%', marginTop: 14 }}>SAVE</button>
-    </form>
+    <div className="checkout-grid">
+      <form className="panel-box" onSubmit={save}>
+        <h3 style={{ fontFamily: 'Press Start 2P', fontSize: 11, color: 'var(--gold)' }}>// PROFILE</h3>
+        {saved && <div className="success-msg">Profile saved.</div>}
+        <div className="field"><label>EMAIL</label><input value={user.email} disabled /></div>
+        <div className="field"><label>USERNAME</label><input value={user.username || '—'} disabled /></div>
+        <div className="field"><label>FIRST NAME</label><input value={form.firstName} onChange={set('firstName')} /></div>
+        <div className="field"><label>LAST NAME</label><input value={form.lastName} onChange={set('lastName')} /></div>
+        <div className="field"><label>PHONE</label><input value={form.phone} onChange={set('phone')} /></div>
+        <div className="muted" style={{ marginTop: 12 }}>Pixel coins: <b style={{ color: 'var(--gold)' }}>{user.coins}</b></div>
+        <button className="btn btn--lime" style={{ width: '100%', marginTop: 14 }}>SAVE PROFILE</button>
+      </form>
+
+      <form className="panel-box" onSubmit={saveCreds} style={{ boxShadow: '4px 4px 0 var(--magenta)' }}>
+        <h3 style={{ fontFamily: 'Press Start 2P', fontSize: 11, color: 'var(--magenta)' }}>// CHANGE EMAIL / USERNAME / PASSWORD</h3>
+        <div className="muted" style={{ marginTop: 6 }}>Enter your current password to confirm, then fill in only what you want to change.</div>
+        {credMsg && <div className={credMsg.ok ? 'success-msg' : 'error-msg'}>{credMsg.text}</div>}
+        <div className="field"><label>CURRENT PASSWORD *</label><input type="password" value={cred.currentPassword} onChange={setC('currentPassword')} required autoComplete="current-password" /></div>
+        <div className="field"><label>NEW EMAIL</label><input type="email" value={cred.newEmail} onChange={setC('newEmail')} placeholder={user.email} /></div>
+        <div className="field"><label>NEW USERNAME (3-30 chars; clear to remove)</label><input value={cred.newUsername} onChange={setC('newUsername')} placeholder={user.username || ''} /></div>
+        <div className="field"><label>NEW PASSWORD (min 8 chars)</label><input type="password" value={cred.newPassword} onChange={setC('newPassword')} autoComplete="new-password" /></div>
+        <button className="btn btn--magenta" style={{ width: '100%', marginTop: 14, background: 'var(--magenta)', color: '#fff' }}>UPDATE CREDENTIALS</button>
+      </form>
+    </div>
   );
 }
 

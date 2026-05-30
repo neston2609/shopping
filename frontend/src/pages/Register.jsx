@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 export default function Register() {
   const { register } = useAuth();
   const navigate = useNavigate();
-  const [form, setForm] = useState({ firstName: '', lastName: '', email: '', password: '' });
+  const [form, setForm] = useState({ firstName: '', lastName: '', email: '', username: '', password: '' });
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -35,6 +35,7 @@ export default function Register() {
           <div className="field"><label>FIRST NAME</label><input value={form.firstName} onChange={set('firstName')} /></div>
           <div className="field"><label>LAST NAME</label><input value={form.lastName} onChange={set('lastName')} /></div>
           <div className="field"><label>EMAIL *</label><input type="email" value={form.email} onChange={set('email')} required /></div>
+          <div className="field"><label>USERNAME (optional — 3-30 chars, letters/numbers/_)</label><input value={form.username} onChange={set('username')} /></div>
           <div className="field"><label>PASSWORD * (min 8 chars)</label><input type="password" value={form.password} onChange={set('password')} required /></div>
           <button className="btn btn--lime" style={{ width: '100%', marginTop: 18 }} disabled={busy}>{busy ? 'CREATING…' : '▶ CREATE ACCOUNT'}</button>
         </form>

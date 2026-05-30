@@ -23,9 +23,16 @@ export function AuthProvider({ children }) {
     else setLoading(false);
   }, [refresh]);
 
-  const login = async (email, password) => {
-    const { token, user } = await api.post('/auth/login', { email, password }, { auth: false });
+  // identifier may be an email OR a username
+  const login = async (identifier, password) => {
+    const { token, user } = await api.post('/auth/login', { identifier, password }, { auth: false });
     setToken(token);
+    setUser(user);
+    return user;
+  };
+
+  const updateCredentials = async (payload) => {
+    const { user } = await api.patch('/auth/credentials', payload);
     setUser(user);
     return user;
   };
@@ -54,7 +61,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, updateProfile, refresh }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout, updateProfile, updateCredentials, refresh }}>
       {children}
     </AuthContext.Provider>
   );
