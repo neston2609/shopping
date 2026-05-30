@@ -33,7 +33,16 @@ function SftpForm({ onSaved }) {
   const save = async (e) => {
     e.preventDefault();
     setMsg(null);
-    const payload = { protocol: form.protocol || 'sftp', host: form.host, port: Number(form.port), username: form.username, basePath: form.basePath, enabled: form.enabled };
+    const payload = {
+      protocol: form.protocol || 'sftp',
+      host: form.host,
+      port: Number(form.port),
+      username: form.username,
+      basePath: form.basePath,
+      enabled: form.enabled,
+      affLink: form.affLink || '',
+      affDelaySeconds: Number(form.affDelaySeconds) || 0,
+    };
     if (form.password) payload.password = form.password;
     try {
       await api.put('/admin/sftp', payload);
@@ -95,6 +104,13 @@ function SftpForm({ onSaved }) {
             <input style={{ flex: 1 }} value={form.basePath} onChange={set('basePath')} placeholder="/home/files" />
             <button type="button" className="btn btn--cyan btn--sm" onClick={() => setPickerOpen(true)}>BROWSE…</button>
           </div>
+        </div>
+
+        <div className="px" style={{ fontSize: 11, color: 'var(--gold)', marginTop: 14, marginBottom: 6 }}>// AFFILIATE GATE (optional)</div>
+        <div className="muted" style={{ marginBottom: 8 }}>If set, the customer's download click opens this URL in a new tab and they have to wait the configured seconds before the file actually downloads.</div>
+        <div className="grid2">
+          <div className="field"><label>AFFILIATE LINK</label><input value={form.affLink || ''} onChange={set('affLink')} placeholder="https://yourshorturl.com/abc (leave blank to skip)" /></div>
+          <div className="field"><label>DELAY (SECONDS, 0-120)</label><input type="number" min="0" max="120" value={form.affDelaySeconds ?? 0} onChange={set('affDelaySeconds')} /></div>
         </div>
 
         {msg && (

@@ -61,13 +61,45 @@ function CategoryGrid() {
   );
 }
 
+// ----- Countdown gate modal -----
+function AffCountdown({ item, seconds, slug, onClose }) {
+  const [left, setLeft] = useState(seconds);
+  useEffect(() => {
+    if (left <= 0) return undefined;
+    const t = setTimeout(() => setLeft((s) => s - 1), 1000);
+    return () => clearTimeout(t);
+  }, [left]);
+  const triggerDownload = () => {
+    const token = localStorage.getItem('rc_token') || '';
+    const url = `${API_BASE}/downloads/${slug}/file?path=${encodeURIComponent(item.path)}&token=${encodeURIComponent(token)}`;
+    const a = document.createElement('a');
+    a.href = url; a.download = item.name; a.rel = 'noopener';
+    document.body.appendChild(a); a.click(); a.remove();
+    onClose();
+  };
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', display: 'grid', placeItems: 'center', zIndex: 100 }}>
+      <div className="panel-box" style={{ maxWidth: 460, textAlign: 'center', boxShadow: '6px 6px 0 var(--magenta)' }}>
+        <div style={{ fontFamily: 'Press Start 2P', fontSize: 12, color: 'var(--gold)' }}>// PREPARING DOWNLOAD</div>
+        <div className="muted" style={{ marginTop: 12 }}>{item.name}</div>
+        <div style={{ marginTop: 22, fontFamily: 'Press Start 2P', fontSize: 36, color: 'var(--lime)' }}>{Math.max(0, left)}</div>
+        <div className="muted" style={{ marginTop: 8 }}>{left > 0 ? 'Please support us by visiting the page that opened in the other tab.' : 'Ready! Click below to start the download.'}</div>
+        <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginTop: 20 }}>
+          <button className="btn btn--lime" onClick={triggerDownload} disabled={left > 0}>{left > 0 ? `WAIT ${left}s` : '↓ DOWNLOAD NOW'}</button>
+          <button className="btn btn--ghost" onClick={onClose}>CANCEL</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ----- Category browser (/downloads/:slug) -----
 function CategoryBrowser({ slug }) {
   const [path, setPath] = useState('');
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [busy, setBusy] = useState(null);
+  const [pending, setPending] = useState(null); // file waiting on aff countdown
 
   useEffect(() => {
     setLoading(true);
@@ -79,19 +111,22 @@ function CategoryBrowser({ slug }) {
       .finally(() => setLoading(false));
   }, [slug, path]);
 
-  // Direct-link download: streams straight from the server to the browser's
-  // save dialog (no in-memory blob), so large files don't hang or OOM.
+  // Direct-link streaming download. If an affiliate gate is configured, open
+  // the aff URL in a new tab and show a countdown — the download fires only
+  // when the timer reaches 0.
   const downloadFile = (item) => {
     setError('');
+    const aff = data?.aff;
+    if (aff?.url && Number(aff.delaySeconds) > 0) {
+      window.open(aff.url, '_blank', 'noopener,noreferrer');
+      setPending({ item, seconds: Number(aff.delaySeconds) });
+      return;
+    }
     const token = localStorage.getItem('rc_token') || '';
     const url = `${API_BASE}/downloads/${slug}/file?path=${encodeURIComponent(item.path)}&token=${encodeURIComponent(token)}`;
     const a = document.createElement('a');
-    a.href = url;
-    a.download = item.name;
-    a.rel = 'noopener';
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
+    a.href = url; a.download = item.name; a.rel = 'noopener';
+    document.body.appendChild(a); a.click(); a.remove();
   };
 
   const segments = path.split('/').filter(Boolean);
@@ -140,9 +175,7 @@ function CategoryBrowser({ slug }) {
                     {item.type === 'dir' ? (
                       <button className="chip" onClick={() => setPath(item.path)}>OPEN</button>
                     ) : (
-                      <button className="btn btn--lime" style={{ fontSize: 9, padding: '9px 12px' }} disabled={busy === item.path} onClick={() => downloadFile(item)}>
-                        {busy === item.path ? '…' : '↓ DOWNLOAD'}
-                      </button>
+                      <button className="btn btn--lime" style={{ fontSize: 9, padding: '9px 12px' }} onClick={() => downloadFile(item)}>↓ DOWNLOAD</button>
                     )}
                   </td>
                 </tr>
@@ -151,6 +184,10 @@ function CategoryBrowser({ slug }) {
           </table>
         )}
       </div>
+
+      {pending && (
+        <AffCountdown item={pending.item} seconds={pending.seconds} slug={slug} onClose={() => setPending(null)} />
+      )}
     </div>
   );
 }

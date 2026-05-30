@@ -372,6 +372,9 @@ model SftpSettings {
   passwordEnc String?  @map("password_enc") // encrypted at rest
   basePath    String   @default("/") @map("base_path")
   enabled     Boolean  @default(false)
+  // Affiliate gate shown before a customer download
+  affLink         String? @map("aff_link")
+  affDelaySeconds Int     @default(0) @map("aff_delay_seconds")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
