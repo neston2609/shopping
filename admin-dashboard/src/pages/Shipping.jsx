@@ -3,6 +3,46 @@ import { api } from '../api';
 
 const BLANK = { name: '', fee: 0, zone: '', estimate: '', enabled: true };
 
+function PromoPanel() {
+  const [promo, setPromo] = useState(null);
+  const [msg, setMsg] = useState(null);
+  const load = () => api.get('/admin/shipping-promo').then((d) => setPromo(d.promo));
+  useEffect(() => { load(); }, []);
+  if (!promo) return null;
+  const save = async (e) => {
+    e.preventDefault();
+    setMsg(null);
+    try {
+      await api.put('/admin/shipping-promo', {
+        freeShippingEnabled: !!promo.freeShippingEnabled,
+        freeShippingThreshold: Number(promo.freeShippingThreshold) || 0,
+      });
+      setMsg({ ok: true, text: 'Shipping promo saved.' });
+      load();
+    } catch (err) {
+      setMsg({ ok: false, text: err.message });
+    }
+  };
+  return (
+    <div className="card" style={{ marginBottom: 16, boxShadow: '4px 4px 0 var(--gold)', maxWidth: 720 }}>
+      <div className="px" style={{ fontSize: 12, color: 'var(--gold)', marginBottom: 10 }}>SHIPPING PROMOTIONS</div>
+      <div className="muted" style={{ marginBottom: 12 }}>Free shipping kicks in when the cart subtotal reaches the threshold. Set the threshold and toggle below.</div>
+      {msg && <div className={msg.ok ? 'success-msg' : 'error-msg'}>{msg.text}</div>}
+      <form onSubmit={save}>
+        <label className="toggle" style={{ marginBottom: 12 }}>
+          <input type="checkbox" checked={promo.freeShippingEnabled} onChange={(e) => setPromo({ ...promo, freeShippingEnabled: e.target.checked })} /> FREE SHIPPING PROMO ENABLED
+        </label>
+        <div className="field">
+          <label>FREE SHIPPING THRESHOLD (฿)</label>
+          <input type="number" min="0" step="0.01" value={promo.freeShippingThreshold} onChange={(e) => setPromo({ ...promo, freeShippingThreshold: e.target.value })} />
+          <div className="muted" style={{ marginTop: 6 }}>Cart subtotal ≥ this amount → shipping is ฿0.</div>
+        </div>
+        <button className="btn btn--lime btn--sm" type="submit">SAVE PROMO</button>
+      </form>
+    </div>
+  );
+}
+
 export default function Shipping() {
   const [list, setList] = useState([]);
   const [form, setForm] = useState(BLANK);
@@ -26,6 +66,7 @@ export default function Shipping() {
   return (
     <>
       <div className="toprow"><div className="h1">SHIPPING METHODS</div></div>
+      <PromoPanel />
       <div className="grid2">
         <div className="card">
           <table>

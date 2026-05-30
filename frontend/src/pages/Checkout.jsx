@@ -14,6 +14,7 @@ export default function Checkout() {
   const [step, setStep] = useState(0);
   const [shippingMethods, setShippingMethods] = useState([]);
   const [paymentMethods, setPaymentMethods] = useState([]);
+  const [freeShipping, setFreeShipping] = useState({ enabled: false, threshold: 0 });
   const [totals, setTotals] = useState({ subtotal: cart.subtotal, shippingFee: 0, total: cart.subtotal });
   const [error, setError] = useState('');
   const [placing, setPlacing] = useState(false);
@@ -35,6 +36,7 @@ export default function Checkout() {
   useEffect(() => {
     api.get('/shipping-methods').then((d) => {
       setShippingMethods(d.methods || []);
+      if (d.freeShipping) setFreeShipping(d.freeShipping);
       if (d.methods?.length) setShippingMethodId(d.methods[0].id);
     });
     api.get('/payment-methods').then((d) => {
@@ -128,7 +130,7 @@ export default function Checkout() {
                   <label key={m.id} className={shippingMethodId === m.id ? 'on' : ''}>
                     <input type="radio" name="ship" checked={shippingMethodId === m.id} onChange={() => setShippingMethodId(m.id)} />
                     <span style={{ flex: 1 }}>{m.name} — {m.estimate} ({m.zone})</span>
-                    <b style={{ color: 'var(--gold)' }}>{cart.subtotal >= 50 ? 'FREE' : `฿${m.fee.toFixed(2)}`}</b>
+                    <b style={{ color: 'var(--gold)' }}>{freeShipping.enabled && cart.subtotal >= freeShipping.threshold ? 'FREE' : `฿${m.fee.toFixed(2)}`}</b>
                   </label>
                 ))}
               </div>

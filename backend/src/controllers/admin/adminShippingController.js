@@ -32,4 +32,39 @@ const remove = asyncHandler(async (req, res) => {
   res.json({ ok: true });
 });
 
-module.exports = { list, create, update, remove, upsertSchema };
+// ---------- Shipping promo (singleton) ----------
+async function getPromoRow() {
+  let row = await prisma.shippingPromo.findFirst({ orderBy: { id: 'asc' } });
+  if (!row) row = await prisma.shippingPromo.create({ data: {} });
+  return row;
+}
+
+function publicPromo(row) {
+  return {
+    freeShippingEnabled: row.freeShippingEnabled,
+    freeShippingThreshold: Number(row.freeShippingThreshold),
+  };
+}
+
+const promoSchema = z.object({
+  freeShippingEnabled: z.boolean(),
+  freeShippingThreshold: z.coerce.number().nonnegative(),
+});
+
+const getPromo = asyncHandler(async (req, res) => {
+  res.json({ promo: publicPromo(await getPromoRow()) });
+});
+
+const updatePromo = asyncHandler(async (req, res) => {
+  const row = await getPromoRow();
+  const saved = await prisma.shippingPromo.update({
+    where: { id: row.id },
+    data: {
+      freeShippingEnabled: req.body.freeShippingEnabled,
+      freeShippingThreshold: req.body.freeShippingThreshold,
+    },
+  });
+  res.json({ promo: publicPromo(saved) });
+});
+
+module.exports = { list, create, update, remove, upsertSchema, getPromo, updatePromo, promoSchema };

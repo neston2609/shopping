@@ -56,6 +56,9 @@ router.get('/shipping', shipping.list);
 router.post('/shipping', validate(shipping.upsertSchema), shipping.create);
 router.put('/shipping/:id', validate(shipping.upsertSchema), shipping.update);
 router.delete('/shipping/:id', shipping.remove);
+// Shipping promo (free-shipping threshold)
+router.get('/shipping-promo', shipping.getPromo);
+router.put('/shipping-promo', validate(shipping.promoSchema), shipping.updatePromo);
 
 // Payment method config
 router.get('/payments', payments.list);

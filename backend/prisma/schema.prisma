@@ -264,6 +264,16 @@ model ShippingMethod {
   @@map("shipping_methods")
 }
 
+model ShippingPromo {
+  id                    Int      @id @default(autoincrement())
+  freeShippingEnabled   Boolean  @default(true) @map("free_shipping_enabled")
+  freeShippingThreshold Decimal  @default(50) @db.Decimal(10, 2) @map("free_shipping_threshold")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  @@map("shipping_promos")
+}
+
 model ShippingAddress {
   id         Int      @id @default(autoincrement())
   userId     Int      @map("user_id")

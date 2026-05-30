@@ -1,9 +1,12 @@
 const prisma = require('../lib/prisma');
 const { asyncHandler } = require('../utils/http');
 
-// GET /api/shipping-methods  — enabled methods for checkout
+// GET /api/shipping-methods  — enabled methods + active promo
 const shippingMethods = asyncHandler(async (req, res) => {
-  const methods = await prisma.shippingMethod.findMany({ where: { enabled: true }, orderBy: { fee: 'asc' } });
+  const [methods, promo] = await Promise.all([
+    prisma.shippingMethod.findMany({ where: { enabled: true }, orderBy: { fee: 'asc' } }),
+    prisma.shippingPromo.findFirst({ orderBy: { id: 'asc' } }),
+  ]);
   res.json({
     methods: methods.map((m) => ({
       id: m.id,
@@ -12,6 +15,10 @@ const shippingMethods = asyncHandler(async (req, res) => {
       zone: m.zone,
       estimate: m.estimate,
     })),
+    freeShipping: {
+      enabled: !!promo?.freeShippingEnabled,
+      threshold: promo ? Number(promo.freeShippingThreshold) : 0,
+    },
   });
 });
 

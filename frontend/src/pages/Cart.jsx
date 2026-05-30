@@ -1,8 +1,14 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { api } from '../api/client';
 import { useCart } from '../context/CartContext';
 
 export default function Cart() {
   const { cart, updateItem, removeItem } = useCart();
+  const [promo, setPromo] = useState({ enabled: false, threshold: 0 });
+  useEffect(() => {
+    api.get('/shipping-methods').then((d) => setPromo(d.freeShipping || { enabled: false, threshold: 0 })).catch(() => {});
+  }, []);
 
   if (!cart.items.length) {
     return (
@@ -17,7 +23,8 @@ export default function Cart() {
     );
   }
 
-  const shipping = cart.subtotal >= 50 ? 0 : 6.99;
+  const qualifiesFree = promo.enabled && cart.subtotal >= promo.threshold;
+  const shipping = qualifiesFree ? 0 : 6.99; // rough estimate; the real fee is computed at checkout
 
   return (
     <div className="container">
@@ -48,7 +55,12 @@ export default function Cart() {
           <div className="line"><span>Subtotal</span><span>฿{cart.subtotal.toFixed(2)}</span></div>
           <div className="line"><span>Shipping (est.)</span><span>{shipping === 0 ? 'FREE' : `฿${shipping.toFixed(2)}`}</span></div>
           <div className="line total"><span>TOTAL</span><span>฿{(cart.subtotal + shipping).toFixed(2)}</span></div>
-          {cart.subtotal < 50 && <div className="muted" style={{ marginTop: 8 }}>Add ฿{(50 - cart.subtotal).toFixed(2)} for FREE shipping!</div>}
+          {promo.enabled && cart.subtotal < promo.threshold && (
+            <div className="muted" style={{ marginTop: 8 }}>Add ฿{(promo.threshold - cart.subtotal).toFixed(2)} for FREE shipping!</div>
+          )}
+          {qualifiesFree && (
+            <div className="success-msg" style={{ marginTop: 8 }}>✓ You qualify for FREE shipping!</div>
+          )}
           <Link className="btn btn--lime" to="/checkout" style={{ width: '100%', marginTop: 16 }}>▶ CHECKOUT</Link>
           <Link className="btn btn--ghost" to="/shop" style={{ width: '100%', marginTop: 10 }}>CONTINUE SHOPPING</Link>
         </div>

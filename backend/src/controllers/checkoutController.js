@@ -50,8 +50,11 @@ async function computeTotals(cartId, shippingMethodId) {
     );
     shippingFee = Math.max(0, ...itemFees);
   }
-  // Free shipping over ฿50 (matches storefront copy).
-  if (subtotal >= 50) shippingFee = 0;
+  // Free shipping promo (configurable in Admin → Shipping).
+  const promo = await prisma.shippingPromo.findFirst({ orderBy: { id: 'asc' } });
+  if (promo && promo.freeShippingEnabled && subtotal >= Number(promo.freeShippingThreshold)) {
+    shippingFee = 0;
+  }
 
   const total = subtotal + shippingFee;
   return {
