@@ -170,7 +170,18 @@ function CategoryBrowser({ slug }) {
                     {item.type === 'dir' ? (
                       <span style={{ cursor: 'pointer', color: 'var(--cyan)', display: 'inline-flex', alignItems: 'center', gap: 10 }} onClick={() => setPath(item.path)}>
                         {thumbUrl ? (
-                          <img src={thumbUrl} alt="" style={{ height: data.display?.folderThumbHeight || 48, width: 'auto', objectFit: 'contain', border: '2px solid var(--line)' }} />
+                          <img
+                            src={thumbUrl}
+                            alt=""
+                            style={{
+                              height: data.display?.folderThumbHeight || 48,
+                              width: 'auto',
+                              maxWidth: 'none',
+                              flexShrink: 0,
+                              display: 'block',
+                              border: '2px solid var(--line)',
+                            }}
+                          />
                         ) : (
                           <span style={{ fontSize: 22 }}>📁</span>
                         )}
