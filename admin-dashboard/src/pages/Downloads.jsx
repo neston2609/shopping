@@ -126,7 +126,35 @@ function CategoryEditor({ initial, onSaved, onCancel }) {
   const [form, setForm] = useState(initial || BLANK_CAT);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [msg, setMsg] = useState(null);
+  const [pendingImage, setPendingImage] = useState(null); // File picked before save
+  const [previewUrl, setPreviewUrl] = useState(null);     // local preview for pending file
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: k === 'enabled' ? e.target.checked : e.target.value }));
+
+  const choosePendingImage = (file) => {
+    if (!file) {
+      setPendingImage(null);
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      setPreviewUrl(null);
+      return;
+    }
+    setPendingImage(file);
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setPreviewUrl(URL.createObjectURL(file));
+  };
+
+  const uploadImageFor = async (id, file) => {
+    const fd = new FormData();
+    fd.append('image', file);
+    const res = await fetch(`/api/admin/download-categories/${id}/image`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${getToken()}` },
+      body: fd,
+      credentials: 'include',
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Image upload failed');
+    return data.category;
+  };
 
   const save = async (e) => {
     e.preventDefault();
@@ -134,28 +162,17 @@ function CategoryEditor({ initial, onSaved, onCancel }) {
     try {
       const payload = { name: form.name, slug: form.slug, description: form.description, sftpPath: form.sftpPath, enabled: form.enabled, position: Number(form.position) || 0 };
       const r = initial?.id ? await api.put(`/admin/download-categories/${initial.id}`, payload) : await api.post('/admin/download-categories', payload);
-      onSaved(r.category);
+      let cat = r.category;
+      if (pendingImage) {
+        cat = await uploadImageFor(cat.id, pendingImage);
+      }
+      setPendingImage(null);
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      setPreviewUrl(null);
+      onSaved(cat);
     } catch (err) {
       setMsg({ ok: false, text: err.details ? err.details.map((d) => d.message).join('; ') : err.message });
     }
-  };
-
-  const uploadImage = async (file) => {
-    if (!initial?.id) {
-      setMsg({ ok: false, text: 'Save the category first, then you can upload an image.' });
-      return;
-    }
-    const fd = new FormData();
-    fd.append('image', file);
-    const res = await fetch(`/api/admin/download-categories/${initial.id}/image`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${getToken()}` },
-      body: fd,
-      credentials: 'include',
-    });
-    const data = await res.json();
-    if (!res.ok) { setMsg({ ok: false, text: data.error || 'Image upload failed' }); return; }
-    onSaved(data.category);
   };
 
   return (
@@ -182,13 +199,14 @@ function CategoryEditor({ initial, onSaved, onCancel }) {
           </div>
         </div>
 
-        {initial?.id && (
-          <div className="field">
-            <label>CATEGORY IMAGE</label>
-            {initial.imageUrl && <img src={initial.imageUrl} alt="" style={{ width: 140, border: '2px solid #fff', marginBottom: 8 }} />}
-            <input type="file" accept="image/*" onChange={(e) => uploadImage(e.target.files[0])} />
-          </div>
-        )}
+        <div className="field">
+          <label>CATEGORY IMAGE</label>
+          {(previewUrl || initial?.imageUrl) && (
+            <img src={previewUrl || initial.imageUrl} alt="" style={{ width: 160, height: 100, objectFit: 'cover', border: '2px solid #fff', marginBottom: 8 }} />
+          )}
+          <input type="file" accept="image/*" onChange={(e) => choosePendingImage(e.target.files[0])} />
+          {pendingImage && <div className="muted" style={{ marginTop: 6 }}>Image will upload when you click {initial?.id ? 'UPDATE' : 'CREATE'}.</div>}
+        </div>
 
         <div className="row-actions" style={{ marginTop: 10 }}>
           <button className="btn btn--lime" type="submit">{initial?.id ? 'UPDATE' : 'CREATE'}</button>
