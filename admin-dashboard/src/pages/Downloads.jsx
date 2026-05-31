@@ -34,6 +34,7 @@ function DisplaySettings({ sourceCount }) {
         affLink: form.affLink || '',
         affDelaySeconds: Number(form.affDelaySeconds) || 0,
         folderThumbHeight: Number(form.folderThumbHeight) || 48,
+        downloadPageSize: Number(form.downloadPageSize) || 50,
       };
       await api.put('/admin/sftp', payload);
       setMsg({ ok: true, text: 'Settings saved.' });
@@ -66,10 +67,16 @@ function DisplaySettings({ sourceCount }) {
         <div className="field"><label>DELAY (SECONDS, 0-120)</label><input type="number" min="0" max="120" value={form.affDelaySeconds ?? 0} onChange={set('affDelaySeconds')} /></div>
       </div>
 
-      <div className="px" style={{ fontSize: 11, color: 'var(--gold)', marginTop: 14, marginBottom: 6 }}>// FOLDER THUMBNAIL DISPLAY</div>
-      <div className="field">
-        <label>FOLDER.JPG THUMBNAIL HEIGHT (px) — width auto-scales by aspect ratio</label>
-        <input type="number" min="16" max="400" value={form.folderThumbHeight ?? 48} onChange={set('folderThumbHeight')} />
+      <div className="px" style={{ fontSize: 11, color: 'var(--gold)', marginTop: 14, marginBottom: 6 }}>// DISPLAY OPTIONS</div>
+      <div className="grid2">
+        <div className="field">
+          <label>FOLDER.JPG THUMBNAIL HEIGHT (px) — width auto-scales by aspect ratio</label>
+          <input type="number" min="16" max="400" value={form.folderThumbHeight ?? 48} onChange={set('folderThumbHeight')} />
+        </div>
+        <div className="field">
+          <label>ITEMS PER PAGE (files + folders shown per page, 5–500)</label>
+          <input type="number" min="5" max="500" value={form.downloadPageSize ?? 50} onChange={set('downloadPageSize')} />
+        </div>
       </div>
 
       {msg && <div className={msg.ok ? 'success-msg' : 'error-msg'}>{msg.text}</div>}

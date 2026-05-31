@@ -406,6 +406,8 @@ model SftpSettings {
   affDelaySeconds Int     @default(0) @map("aff_delay_seconds")
   // Folder.jpg thumbnail display height (width is auto, preserves aspect)
   folderThumbHeight Int   @default(48) @map("folder_thumb_height")
+  // How many file/folder entries per page on the public downloads browser.
+  downloadPageSize  Int   @default(50) @map("download_page_size")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 

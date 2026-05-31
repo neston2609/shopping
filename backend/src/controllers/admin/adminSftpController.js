@@ -11,6 +11,7 @@ const updateSchema = z.object({
   affLink: z.string().optional().or(z.literal('')),
   affDelaySeconds: z.coerce.number().int().min(0).max(120).default(0),
   folderThumbHeight: z.coerce.number().int().min(16).max(400).default(48),
+  downloadPageSize: z.coerce.number().int().min(5).max(500).default(50),
 });
 
 async function getRow() {
@@ -26,6 +27,7 @@ function publicSettings(row) {
     affLink: row.affLink || '',
     affDelaySeconds: row.affDelaySeconds || 0,
     folderThumbHeight: row.folderThumbHeight || 48,
+    downloadPageSize: row.downloadPageSize || 50,
   };
 }
 
@@ -35,12 +37,13 @@ const get = asyncHandler(async (req, res) => {
 
 const update = asyncHandler(async (req, res) => {
   const row = await getRow();
-  const { enabled, affLink, affDelaySeconds, folderThumbHeight } = req.body;
+  const { enabled, affLink, affDelaySeconds, folderThumbHeight, downloadPageSize } = req.body;
   const data = {
     enabled: enabled ?? row.enabled,
     affLink: affLink !== undefined ? (affLink || null) : undefined,
     affDelaySeconds: affDelaySeconds ?? undefined,
     folderThumbHeight: folderThumbHeight ?? undefined,
+    downloadPageSize: downloadPageSize ?? undefined,
   };
   const saved = await prisma.sftpSettings.update({ where: { id: row.id }, data });
   res.json({ settings: publicSettings(saved) });

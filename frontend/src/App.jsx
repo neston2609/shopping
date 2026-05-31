@@ -13,6 +13,7 @@ import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import Account from './pages/Account';
+import Orders from './pages/Orders';
 import Downloads from './pages/Downloads';
 
 export default function App() {
@@ -33,6 +34,7 @@ export default function App() {
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/account" element={<Account />} />
+              <Route path="/orders" element={<Orders />} />
               <Route path="/downloads" element={<Downloads />} />
               <Route path="/downloads/:slug" element={<Downloads />} />
             </Route>

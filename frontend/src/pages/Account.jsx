@@ -3,104 +3,7 @@ import { Navigate, Link } from 'react-router-dom';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 
-const TABS = ['ORDERS', 'ADDRESSES', 'PROFILE'];
-
-const STATUS_LABEL = {
-  pending: 'PENDING',
-  awaiting_payment: 'AWAITING PAYMENT',
-  payment_review: 'PAYMENT UNDER REVIEW',
-  awaiting_shipment: 'PAID · PREPARING SHIPMENT',
-  paid: 'PAID',
-  shipped: 'SHIPPED',
-  delivered: 'DELIVERED',
-  cancelled: 'CANCELLED',
-};
-const STATUS_COLOR = {
-  pending: 'var(--gold)',
-  awaiting_payment: 'var(--gold)',
-  payment_review: 'var(--cyan)',
-  awaiting_shipment: 'var(--lime)',
-  paid: 'var(--lime)',
-  shipped: 'var(--cyan)',
-  delivered: 'var(--lime)',
-  cancelled: 'var(--magenta)',
-};
-
-function Orders() {
-  const [orders, setOrders] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [openId, setOpenId] = useState(null);
-
-  useEffect(() => {
-    api.get('/account/orders').then((d) => setOrders(d.orders || [])).finally(() => setLoading(false));
-  }, []);
-
-  if (loading) return <div className="loading">LOADING ORDERS…</div>;
-  if (!orders.length) return <div className="empty-state">No orders yet. <Link to="/shop" style={{ color: 'var(--lime)' }}>Start a quest →</Link></div>;
-
-  return (
-    <div>
-      {orders.map((o) => {
-        const statusLabel = STATUS_LABEL[o.status] || o.status.toUpperCase();
-        const statusColor = STATUS_COLOR[o.status] || 'var(--ink-dim)';
-        const isBank = o.payment?.method === 'bank_transfer';
-        const needSlip = isBank && (o.status === 'awaiting_payment' || (o.status === 'pending' && o.payment?.status === 'pending'));
-        const reviewing = isBank && o.status === 'payment_review';
-        const open = openId === o.id;
-        return (
-          <div className="panel-box" key={o.id} style={{ marginBottom: 16 }}>
-            <div className="row-between">
-              <div style={{ fontFamily: 'Press Start 2P', fontSize: 11, color: 'var(--gold)' }}>{o.orderNumber}</div>
-              <span style={{ fontFamily: 'Press Start 2P', fontSize: 9, padding: '4px 8px', border: `2px solid ${statusColor}`, color: statusColor, background: '#000' }}>{statusLabel}</span>
-            </div>
-            <div className="muted" style={{ marginTop: 10 }}>
-              {new Date(o.createdAt).toLocaleString()} · {o.items.length} item{o.items.length === 1 ? '' : 's'} · <b style={{ color: 'var(--lime)' }}>฿{o.total.toFixed(2)}</b>
-            </div>
-            {o.trackingNumber && <div className="muted" style={{ marginTop: 6 }}>Tracking: <b style={{ color: '#fff' }}>{o.trackingNumber}</b></div>}
-            {o.payment && (
-              <div className="muted" style={{ marginTop: 6 }}>
-                Payment: <b style={{ color: '#fff' }}>{o.payment.method?.replace(/_/g, ' ').toUpperCase()}</b>
-                {' · '}<span style={{ color: o.payment.status === 'paid' ? 'var(--lime)' : o.payment.status === 'submitted' ? 'var(--cyan)' : 'var(--gold)' }}>{(o.payment.status || '').toUpperCase()}</span>
-              </div>
-            )}
-
-            <div style={{ marginTop: 12, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-              {needSlip && (
-                <Link className="btn btn--lime btn--sm" to={`/order-confirmation/${o.orderNumber}`}>
-                  ▶ PAY / UPLOAD SLIP
-                </Link>
-              )}
-              {reviewing && (
-                <Link className="btn btn--cyan btn--sm" to={`/order-confirmation/${o.orderNumber}`}>
-                  RE-UPLOAD SLIP
-                </Link>
-              )}
-              <Link className="btn btn--ghost btn--sm" to={`/order-confirmation/${o.orderNumber}`}>VIEW</Link>
-              <button className="btn btn--ghost btn--sm" onClick={() => setOpenId(open ? null : o.id)}>
-                {open ? '▴ HIDE ITEMS' : '▾ SHOW ITEMS'}
-              </button>
-            </div>
-
-            {open && (
-              <div style={{ marginTop: 12, paddingTop: 12, borderTop: '2px dashed var(--ink-dim)' }}>
-                {o.items.map((i) => <div key={i.id} className="muted">{i.quantity}× {i.name} — ฿{i.lineTotal.toFixed(2)}</div>)}
-                {o.shipping && (
-                  <div className="muted" style={{ marginTop: 10, lineHeight: 1.6 }}>
-                    <b style={{ color: '#fff' }}>SHIP TO</b><br />
-                    {o.shipping.name}{o.shipping.phone ? ` · ${o.shipping.phone}` : ''}<br />
-                    {o.shipping.line1}{o.shipping.line2 ? `, ${o.shipping.line2}` : ''}<br />
-                    {o.shipping.city} {o.shipping.state} {o.shipping.postalCode}<br />
-                    {o.shipping.country}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        );
-      })}
-    </div>
-  );
-}
+const TABS = ['ADDRESSES', 'PROFILE'];
 
 // ----- Addresses -----
 const BLANK_ADDR = { label: '', fullName: '', phone: '', line1: '', line2: '', city: '', state: '', postalCode: '', country: 'Thailand', isDefault: false };
@@ -263,18 +166,20 @@ function Profile() {
 
 export default function Account() {
   const { user, loading } = useAuth();
-  const [tab, setTab] = useState('ORDERS');
+  const [tab, setTab] = useState('ADDRESSES');
   if (loading) return <div className="loading">LOADING…</div>;
   if (!user) return <Navigate to="/login" state={{ from: '/account' }} replace />;
 
   return (
     <div className="container">
       <h1 className="page-title">▶ PLAYER PROFILE · {(user.firstName || 'PLAYER').toUpperCase()}</h1>
+      <div className="muted" style={{ marginBottom: 10 }}>
+        Looking for your orders? Head to <Link to="/orders" style={{ color: 'var(--lime)' }}>MY ORDERS →</Link>
+      </div>
       <div className="steps">
         {TABS.map((t) => <span key={t} className={`s ${tab === t ? 'on' : ''}`} style={{ cursor: 'pointer' }} onClick={() => setTab(t)}>{t}</span>)}
       </div>
       <div style={{ marginTop: 18 }}>
-        {tab === 'ORDERS' && <Orders />}
         {tab === 'ADDRESSES' && <Addresses />}
         {tab === 'PROFILE' && <Profile />}
       </div>

@@ -116,6 +116,47 @@ function AffCountdown({ item, seconds, slug, onClose }) {
   );
 }
 
+// ----- Pager (numbered + prev/next, with collapsed middle when many pages) -----
+function Pager({ page, pageCount, total, pageSize, onChange }) {
+  const go = (p) => {
+    if (p < 1 || p > pageCount || p === page) return;
+    onChange(p);
+    // Scroll back to the top of the list for context.
+    try { window.scrollTo({ top: 200, behavior: 'smooth' }); } catch (e) { /* */ }
+  };
+  // Build a compact page-button list: always first + last, plus a window around the current page.
+  const buttons = [];
+  const push = (p) => buttons.push(p);
+  const inWindow = (p) => Math.abs(p - page) <= 1;
+  for (let p = 1; p <= pageCount; p += 1) {
+    if (p === 1 || p === pageCount || inWindow(p)) push(p);
+    else if (buttons[buttons.length - 1] !== '…') push('…');
+  }
+  const start = (page - 1) * pageSize + 1;
+  const end = Math.min(total, page * pageSize);
+  return (
+    <div style={{ marginTop: 16, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, justifyContent: 'space-between' }}>
+      <div className="muted" style={{ fontSize: 13 }}>
+        Showing <b style={{ color: '#fff' }}>{start}–{end}</b> of <b style={{ color: 'var(--lime)' }}>{total}</b>
+      </div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+        <button className="chip" onClick={() => go(page - 1)} disabled={page <= 1} style={{ opacity: page <= 1 ? 0.4 : 1 }}>◀ PREV</button>
+        {buttons.map((p, i) => p === '…' ? (
+          <span key={`gap-${i}`} className="muted" style={{ padding: '0 6px' }}>…</span>
+        ) : (
+          <button
+            key={p}
+            className="chip"
+            onClick={() => go(p)}
+            style={p === page ? { background: 'var(--lime)', color: '#0d0420', borderColor: 'var(--lime)', fontWeight: 'bold' } : undefined}
+          >{p}</button>
+        ))}
+        <button className="chip" onClick={() => go(page + 1)} disabled={page >= pageCount} style={{ opacity: page >= pageCount ? 0.4 : 1 }}>NEXT ▶</button>
+      </div>
+    </div>
+  );
+}
+
 // ----- Category browser (/downloads/:slug) -----
 function CategoryBrowser({ slug }) {
   const [path, setPath] = useState('');
@@ -123,10 +164,12 @@ function CategoryBrowser({ slug }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [pending, setPending] = useState(null); // file waiting on aff countdown
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
     setLoading(true);
     setError('');
+    setPage(1); // reset to first page whenever path changes
     api
       .get(`/downloads/${slug}?path=${encodeURIComponent(path)}`)
       .then((d) => setData(d))
@@ -179,46 +222,60 @@ function CategoryBrowser({ slug }) {
           <div className="loading">LOADING FILES…</div>
         ) : !data || data.items.length === 0 ? (
           <div className="empty-state">This folder is empty.</div>
-        ) : (
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <tbody>
-              {data.items.map((item) => {
-                const token = localStorage.getItem('rc_token') || '';
-                const thumbUrl = item.thumb
-                  ? `${API_BASE}/downloads/${slug}/thumb?path=${encodeURIComponent(item.thumb)}&token=${encodeURIComponent(token)}`
-                  : null;
-                return (
-                <tr key={item.path} style={{ borderBottom: '1px solid var(--line)' }}>
-                  <td style={{ padding: '14px 8px' }}>
-                    {item.type === 'dir' ? (
-                      <span style={{ cursor: 'pointer', color: 'var(--cyan)', display: 'inline-flex', alignItems: 'center', gap: 10 }} onClick={() => setPath(item.path)}>
-                        {thumbUrl ? (
-                          <FolderThumb src={thumbUrl} height={data.display?.folderThumbHeight || 48} />
+        ) : (() => {
+          const pageSize = Math.max(5, Number(data.display?.pageSize) || 50);
+          const total = data.items.length;
+          const pageCount = Math.max(1, Math.ceil(total / pageSize));
+          const curPage = Math.min(page, pageCount);
+          const start = (curPage - 1) * pageSize;
+          const visible = data.items.slice(start, start + pageSize);
+          return (
+            <>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <tbody>
+                  {visible.map((item) => {
+                    const token = localStorage.getItem('rc_token') || '';
+                    const thumbUrl = item.thumb
+                      ? `${API_BASE}/downloads/${slug}/thumb?path=${encodeURIComponent(item.thumb)}&token=${encodeURIComponent(token)}`
+                      : null;
+                    return (
+                    <tr key={item.path} style={{ borderBottom: '1px solid var(--line)' }}>
+                      <td style={{ padding: '14px 8px' }}>
+                        {item.type === 'dir' ? (
+                          <span style={{ cursor: 'pointer', color: 'var(--cyan)', display: 'inline-flex', alignItems: 'center', gap: 10 }} onClick={() => setPath(item.path)}>
+                            {thumbUrl ? (
+                              <FolderThumb src={thumbUrl} height={data.display?.folderThumbHeight || 48} />
+                            ) : (
+                              <span style={{ fontSize: 22 }}>📁</span>
+                            )}
+                            <span>{item.name}/</span>
+                          </span>
                         ) : (
-                          <span style={{ fontSize: 22 }}>📁</span>
+                          <span>🗎 {item.name}</span>
                         )}
-                        <span>{item.name}/</span>
-                      </span>
-                    ) : (
-                      <span>🗎 {item.name}</span>
-                    )}
-                  </td>
-                  <td className="muted" style={{ padding: '14px 8px', textAlign: 'right', width: 120 }}>
-                    {item.type === 'file' ? fmtSize(item.size) : '—'}
-                  </td>
-                  <td style={{ padding: '14px 8px', textAlign: 'right', width: 160 }}>
-                    {item.type === 'dir' ? (
-                      <button className="chip" onClick={() => setPath(item.path)}>OPEN</button>
-                    ) : (
-                      <button className="btn btn--lime" style={{ fontSize: 9, padding: '9px 12px' }} onClick={() => downloadFile(item)}>↓ DOWNLOAD</button>
-                    )}
-                  </td>
-                </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        )}
+                      </td>
+                      <td className="muted" style={{ padding: '14px 8px', textAlign: 'right', width: 120 }}>
+                        {item.type === 'file' ? fmtSize(item.size) : '—'}
+                      </td>
+                      <td style={{ padding: '14px 8px', textAlign: 'right', width: 160 }}>
+                        {item.type === 'dir' ? (
+                          <button className="chip" onClick={() => setPath(item.path)}>OPEN</button>
+                        ) : (
+                          <button className="btn btn--lime" style={{ fontSize: 9, padding: '9px 12px' }} onClick={() => downloadFile(item)}>↓ DOWNLOAD</button>
+                        )}
+                      </td>
+                    </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+
+              {pageCount > 1 && (
+                <Pager page={curPage} pageCount={pageCount} total={total} pageSize={pageSize} onChange={setPage} />
+              )}
+            </>
+          );
+        })()}
       </div>
 
       {pending && (

@@ -20,7 +20,10 @@ async function affConfig() {
 
 async function downloadsDisplayConfig() {
   const row = await prisma.sftpSettings.findFirst({ orderBy: { id: 'asc' } });
-  return { folderThumbHeight: row?.folderThumbHeight || 48 };
+  return {
+    folderThumbHeight: row?.folderThumbHeight || 48,
+    pageSize: row?.downloadPageSize || 50,
+  };
 }
 
 const listCategories = asyncHandler(async (req, res) => {

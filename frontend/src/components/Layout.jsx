@@ -99,6 +99,7 @@ export default function Layout() {
               {user.role === 'admin' && (
                 <a className="pill" href={ADMIN_URL} style={{ color: 'var(--gold)', borderColor: 'var(--gold)' }}>⚙ ADMIN</a>
               )}
+              <Link className="pill" to="/orders" style={{ color: 'var(--cyan)', borderColor: 'var(--cyan)' }}>MY ORDERS</Link>
               <Link className="pill" to="/account">{(user.firstName || 'PLAYER').toUpperCase()}</Link>
               <span className="pill" style={{ color: 'var(--lime)', borderColor: 'var(--lime)' }} onClick={logout}>SIGN OUT</span>
             </>
@@ -180,7 +181,7 @@ function Footer() {
             <li><a href="#">Help / FAQ</a></li>
             <li><a href="#">Shipping</a></li>
             <li><a href="#">Returns</a></li>
-            <li><Link to="/account">Track Order</Link></li>
+            <li><Link to="/orders">Track Order</Link></li>
             <li><a href="#">Contact</a></li>
           </ul>
         </div>
