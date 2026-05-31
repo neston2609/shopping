@@ -276,6 +276,10 @@ model StoreSettings {
   id             Int      @id @default(autoincrement())
   heroHeading    String?  @map("hero_heading") // may contain HTML (e.g. <br/>, <span class="cyan">…)
   heroSubheading String?  @map("hero_subheading")
+  // Full embed snippet that LINE OA Manager → Chat plugin generates.
+  // When set, the storefront parses it and injects LINE's hosted chat bubble.
+  // Stored verbatim so we tolerate future tweaks to LINE's script format.
+  lineChatEmbed String? @map("line_chat_embed")
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
 

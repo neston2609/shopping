@@ -2,9 +2,15 @@ const { z } = require('zod');
 const prisma = require('../../lib/prisma');
 const { asyncHandler } = require('../../utils/http');
 
+// LINE OA Chat Plugin embed snippet — at most ~4KB of HTML/JS from LINE.
+// Admin pastes exactly what LINE OA Manager hands them; we don't try to
+// validate the contents because LINE may change the format over time.
+const LINE_EMBED_MAX = 4000;
+
 const updateSchema = z.object({
   heroHeading: z.string().optional().or(z.literal('')),
   heroSubheading: z.string().optional().or(z.literal('')),
+  lineChatEmbed: z.string().max(LINE_EMBED_MAX, `Snippet exceeds ${LINE_EMBED_MAX} characters`).optional().or(z.literal('')),
 });
 
 async function getRow() {
@@ -17,6 +23,7 @@ function publicSettings(row) {
   return {
     heroHeading: row.heroHeading || '',
     heroSubheading: row.heroSubheading || '',
+    lineChatEmbed: row.lineChatEmbed || '',
   };
 }
 
@@ -31,6 +38,7 @@ const update = asyncHandler(async (req, res) => {
     data: {
       heroHeading: req.body.heroHeading || null,
       heroSubheading: req.body.heroSubheading || null,
+      lineChatEmbed: req.body.lineChatEmbed ? req.body.lineChatEmbed.trim() : null,
     },
   });
   res.json({ settings: publicSettings(saved) });

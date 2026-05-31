@@ -68,11 +68,48 @@ export default function Layout() {
   const location = useLocation();
   const [search, setSearch] = useState('');
   const [promo, setPromo] = useState({ enabled: false, threshold: 0 });
+  const [lineChatEmbed, setLineChatEmbed] = useState('');
   const activeKey = activeNavKey(location.pathname, location.search);
 
   useEffect(() => {
     api.get('/shipping-methods').then((d) => setPromo(d.freeShipping || { enabled: false, threshold: 0 })).catch(() => {});
+    api.get('/store-settings').then((d) => setLineChatEmbed(d.lineChatEmbed || '')).catch(() => {});
   }, []);
+
+  // Inject the LINE Chat Plugin embed once per page-load (admin pastes the raw
+  // snippet LINE OA Manager hands them; we parse it so <script> tags actually
+  // execute — innerHTML alone would just paint inert text). Admin replies from
+  // LINE OA Manager, so no further plumbing needed here.
+  useEffect(() => {
+    if (!lineChatEmbed || window.__lineChatLoaded) return undefined;
+    window.__lineChatLoaded = true;
+    try {
+      const host = document.createElement('div');
+      host.id = 'line-chat-embed-host';
+      host.style.position = 'relative';
+      host.style.zIndex = '99999';
+      // Parse the pasted HTML into a detached document so we can walk it safely.
+      const parsed = new DOMParser().parseFromString(lineChatEmbed, 'text/html');
+      const nodes = Array.from(parsed.body.childNodes);
+      for (const node of nodes) {
+        if (node.nodeType === Node.ELEMENT_NODE && node.tagName === 'SCRIPT') {
+          // Recreate the script so the browser actually executes it.
+          const s = document.createElement('script');
+          for (const { name, value } of node.attributes) s.setAttribute(name, value);
+          if (!node.src) s.text = node.textContent || '';
+          // Append scripts directly to <body> so LINE can read its host context.
+          document.body.appendChild(s);
+        } else {
+          host.appendChild(node.cloneNode(true));
+        }
+      }
+      document.body.appendChild(host);
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.warn('Failed to inject LINE chat embed:', e);
+    }
+    return () => { /* keep mounted across route changes */ };
+  }, [lineChatEmbed]);
 
   const promoText = promo.enabled && promo.threshold > 0
     ? `FREE SHIPPING ON ORDERS OVER ฿${Number(promo.threshold).toLocaleString()}`

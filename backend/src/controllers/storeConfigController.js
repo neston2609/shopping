@@ -45,12 +45,14 @@ const paymentMethods = asyncHandler(async (req, res) => {
   });
 });
 
-// GET /api/store-settings — hero heading + subheading for the storefront
+// GET /api/store-settings — hero heading + subheading + LINE Chat embed snippet
+// (public — used by the storefront to render dynamic copy and the chat bubble).
 const storeSettings = asyncHandler(async (req, res) => {
   const row = await prisma.storeSettings.findFirst({ orderBy: { id: 'asc' } });
   res.json({
     heroHeading: row?.heroHeading || '',
     heroSubheading: row?.heroSubheading || '',
+    lineChatEmbed: row?.lineChatEmbed || '',
   });
 });
 

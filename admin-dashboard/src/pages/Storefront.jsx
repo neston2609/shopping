@@ -16,10 +16,11 @@ export default function Storefront() {
       await api.put('/admin/store-settings', {
         heroHeading: form.heroHeading || '',
         heroSubheading: form.heroSubheading || '',
+        lineChatEmbed: (form.lineChatEmbed || '').trim(),
       });
       setMsg({ ok: true, text: 'Storefront settings saved.' });
     } catch (err) {
-      setMsg({ ok: false, text: err.message });
+      setMsg({ ok: false, text: err.details ? err.details.map((d) => d.message).join('; ') : err.message });
     }
   };
 
@@ -50,7 +51,28 @@ export default function Storefront() {
             style={{ minHeight: 100 }}
           />
         </div>
-        <button className="btn btn--lime">SAVE</button>
+
+        <div className="px" style={{ fontSize: 11, color: 'var(--gold)', marginTop: 18, marginBottom: 6 }}>// LINE OA CHAT BUBBLE</div>
+        <div className="muted" style={{ marginBottom: 10, lineHeight: 1.6 }}>
+          Floating LINE chat button on every storefront page. Setup:
+          <ol style={{ paddingLeft: 18, marginTop: 6 }}>
+            <li>Open <a href="https://manager.line.biz/" target="_blank" rel="noreferrer" style={{ color: 'var(--cyan)' }}>LINE Official Account Manager</a> → pick your account.</li>
+            <li><b>Home</b> → <b>Chat plugin</b> (under <i>Tools</i>) → click <b>Start using</b> / <b>Get embed code</b>. Add your website domain (e.g. <code>shopping.retroconsole1981.com</code> and <code>www.retroconsole1981.com</code>) so LINE allows the bubble there.</li>
+            <li>LINE shows an embed snippet (1–2 <code>&lt;script&gt;</code> tags plus a <code>&lt;div&gt;</code>). <b>Copy the whole thing</b> and paste it in the textarea below — leave it blank to hide the bubble.</li>
+            <li>Customers click the bubble → opens LINE chat with your OA. You reply from LINE OA Manager (web or mobile app) — no other setup needed.</li>
+          </ol>
+        </div>
+        <div className="field">
+          <label>LINE CHAT EMBED SNIPPET (paste exactly what LINE gives you)</label>
+          <textarea
+            value={form.lineChatEmbed || ''}
+            onChange={set('lineChatEmbed')}
+            placeholder={'<script src="https://www.line-scdn.net/n/line_chat/loader.js" async defer></script>\n<div data-lcp="<your-plugin-id>"></div>'}
+            style={{ minHeight: 110, fontFamily: 'monospace', fontSize: 12 }}
+          />
+        </div>
+
+        <button className="btn btn--lime" style={{ marginTop: 6 }}>SAVE</button>
       </form>
 
       <div className="card" style={{ marginTop: 16, maxWidth: 800 }}>
