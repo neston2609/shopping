@@ -34,6 +34,9 @@ export default function Login() {
         <form onSubmit={submit}>
           <div className="field"><label>EMAIL OR USERNAME</label><input value={identifier} onChange={(e) => setIdentifier(e.target.value)} required autoComplete="username" /></div>
           <div className="field"><label>PASSWORD</label><input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required /></div>
+          <div style={{ textAlign: 'right', marginTop: -4, marginBottom: 4 }}>
+            <Link to="/forgot-password" style={{ color: 'var(--cyan)', fontSize: 13 }}>Forgot password?</Link>
+          </div>
           <button className="btn btn--lime" style={{ width: '100%', marginTop: 18 }} disabled={busy}>{busy ? 'LOADING…' : '▶ SIGN IN'}</button>
         </form>
         <div className="muted" style={{ marginTop: 16 }}>New here? <Link to="/register" style={{ color: 'var(--lime)' }}>Start a new game →</Link></div>

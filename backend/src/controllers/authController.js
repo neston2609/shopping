@@ -1,10 +1,15 @@
+const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const { nanoid } = require('nanoid');
 const { z } = require('zod');
 const prisma = require('../lib/prisma');
 const { signToken } = require('../lib/token');
-const { asyncHandler, unauthorized, conflict, notFound } = require('../utils/http');
+const { asyncHandler, unauthorized, conflict, badRequest, notFound } = require('../utils/http');
 const { queueTemplateEmail } = require('../lib/mailer');
+const env = require('../config/env');
+
+const RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // 1 hour
+function hashResetToken(t) { return crypto.createHash('sha256').update(t).digest('hex'); }
 
 const USERNAME_RE = /^[a-zA-Z0-9_]{3,30}$/;
 
@@ -32,6 +37,14 @@ const credentialsSchema = z.object({
 }).refine((v) => v.newEmail || v.newUsername || v.newPassword, {
   message: 'Provide at least one of newEmail, newUsername, newPassword',
   path: ['newEmail'],
+});
+
+const forgotSchema = z.object({
+  email: z.string().email(),
+});
+const resetSchema = z.object({
+  token: z.string().min(20),
+  newPassword: z.string().min(8, 'Password must be at least 8 characters'),
 });
 
 const profileSchema = z.object({
@@ -161,6 +174,64 @@ const updateCredentials = asyncHandler(async (req, res) => {
   res.json({ user: publicUser(updated) });
 });
 
+// POST /api/auth/forgot-password  — public; always responds 200 even if the
+// email isn't on file (don't leak which addresses are registered).
+const forgotPassword = asyncHandler(async (req, res) => {
+  const email = String(req.body.email || '').trim().toLowerCase();
+  const user = await prisma.user.findFirst({ where: { email: { equals: email, mode: 'insensitive' } } });
+  if (user && user.isActive) {
+    // Invalidate any previous unused tokens for this user
+    await prisma.passwordResetToken.updateMany({
+      where: { userId: user.id, usedAt: null },
+      data: { usedAt: new Date() },
+    });
+    const raw = crypto.randomBytes(32).toString('hex'); // 64 chars
+    await prisma.passwordResetToken.create({
+      data: {
+        userId: user.id,
+        tokenHash: hashResetToken(raw),
+        expiresAt: new Date(Date.now() + RESET_TOKEN_TTL_MS),
+      },
+    });
+    const resetLink = `${env.publicUrl.replace(/\/$/, '')}/reset-password?token=${raw}`;
+    queueTemplateEmail('password_reset', {
+      to: user.email,
+      vars: {
+        customer_name: [user.firstName, user.lastName].filter(Boolean).join(' ') || user.email,
+        reset_link: resetLink,
+        expires_in: '1 hour',
+      },
+    }).catch(() => {});
+  }
+  // Always succeed (anti-enumeration)
+  res.json({ ok: true, message: 'If that email is on file, a reset link is on its way.' });
+});
+
+// POST /api/auth/reset-password  — public; consumes a valid token, sets new password.
+const resetPassword = asyncHandler(async (req, res) => {
+  const { token, newPassword } = req.body;
+  const row = await prisma.passwordResetToken.findUnique({
+    where: { tokenHash: hashResetToken(token) },
+    include: { user: { include: { role: true } } },
+  });
+  if (!row || row.usedAt || row.expiresAt < new Date() || !row.user || !row.user.isActive) {
+    throw badRequest('This reset link is invalid or has expired. Request a new one.');
+  }
+  const passwordHash = await bcrypt.hash(newPassword, 12);
+  await prisma.$transaction([
+    prisma.user.update({ where: { id: row.userId }, data: { passwordHash } }),
+    prisma.passwordResetToken.update({ where: { id: row.id }, data: { usedAt: new Date() } }),
+    // Burn any other live tokens for this user too.
+    prisma.passwordResetToken.updateMany({
+      where: { userId: row.userId, usedAt: null, NOT: { id: row.id } },
+      data: { usedAt: new Date() },
+    }),
+  ]);
+  // Auto-login by issuing a fresh JWT
+  const tokenJwt = signToken({ sub: row.user.id, role: row.user.role.name });
+  res.json({ ok: true, token: tokenJwt, user: publicUser(row.user) });
+});
+
 const logout = asyncHandler(async (req, res) => {
   res.clearCookie('token');
   res.json({ ok: true });
@@ -186,9 +257,13 @@ module.exports = {
   me,
   updateProfile,
   updateCredentials,
+  forgotPassword,
+  resetPassword,
   registerSchema,
   loginSchema,
   profileSchema,
   credentialsSchema,
+  forgotSchema,
+  resetSchema,
   publicUser,
 };

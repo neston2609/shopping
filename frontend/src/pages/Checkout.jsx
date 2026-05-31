@@ -31,10 +31,15 @@ export default function Checkout() {
     city: '',
     state: '',
     postalCode: '',
-    country: 'USA',
+    country: 'Thailand',
   });
   const [shippingMethodId, setShippingMethodId] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState('card');
+
+  // Address book (logged-in only)
+  const [savedAddresses, setSavedAddresses] = useState([]);
+  const [selectedAddressId, setSelectedAddressId] = useState('new'); // id, or 'new'
+  const [saveAddress, setSaveAddress] = useState(false);
 
   useEffect(() => {
     api.get('/shipping-methods').then((d) => {
@@ -47,6 +52,46 @@ export default function Checkout() {
       if (d.methods?.length) setPaymentMethod(d.methods[0].method);
     });
   }, []);
+
+  // Load address book once when logged in, default to ★ default address.
+  useEffect(() => {
+    if (!user) return;
+    api.get('/account/addresses').then((d) => {
+      const list = d.addresses || [];
+      setSavedAddresses(list);
+      const def = list.find((a) => a.isDefault) || list[0];
+      if (def) {
+        setSelectedAddressId(def.id);
+        applyAddress(def);
+      }
+    }).catch(() => {});
+  }, [user]); // eslint-disable-line
+
+  const applyAddress = (a) => {
+    setForm((f) => ({
+      ...f,
+      fullName: a.fullName || f.fullName,
+      phone: a.phone || '',
+      line1: a.line1 || '',
+      line2: a.line2 || '',
+      city: a.city || '',
+      state: a.state || '',
+      postalCode: a.postalCode || '',
+      country: a.country || f.country,
+    }));
+  };
+
+  const pickAddress = (val) => {
+    setSelectedAddressId(val);
+    if (val === 'new') {
+      setForm((f) => ({ ...f, fullName: [user?.firstName, user?.lastName].filter(Boolean).join(' '), phone: '', line1: '', line2: '', city: '', state: '', postalCode: '' }));
+      setSaveAddress(false);
+    } else {
+      const a = savedAddresses.find((x) => String(x.id) === String(val));
+      if (a) applyAddress(a);
+      setSaveAddress(false);
+    }
+  };
 
   useEffect(() => {
     if (shippingMethodId) {
@@ -116,6 +161,26 @@ export default function Checkout() {
         paymentMethod,
         discountCode: discountCode || undefined,
       });
+      // Save the entered address to the address book if requested.
+      if (user && saveAddress && selectedAddressId === 'new') {
+        try {
+          await api.post('/account/addresses', {
+            fullName: form.fullName,
+            phone: form.phone || undefined,
+            line1: form.line1,
+            line2: form.line2 || undefined,
+            city: form.city,
+            state: form.state || undefined,
+            postalCode: form.postalCode,
+            country: form.country,
+            isDefault: savedAddresses.length === 0,
+          });
+        } catch (saveErr) {
+          // Don't block the post-order flow on a save failure.
+          // eslint-disable-next-line no-console
+          console.warn('Could not save address:', saveErr.message);
+        }
+      }
       await reload();
       navigate(`/order-confirmation/${order.orderNumber}`, { state: { order } });
     } catch (e) {
@@ -143,6 +208,21 @@ export default function Checkout() {
           {step === 0 && (
             <>
               <h3 style={{ fontFamily: 'Press Start 2P', fontSize: 12, color: 'var(--gold)' }}>// SHIPPING ADDRESS</h3>
+
+              {user && savedAddresses.length > 0 && (
+                <div className="field">
+                  <label>USE A SAVED ADDRESS</label>
+                  <select value={selectedAddressId} onChange={(e) => pickAddress(e.target.value)}>
+                    {savedAddresses.map((a) => (
+                      <option key={a.id} value={a.id}>
+                        {a.isDefault ? '★ ' : ''}{a.label ? `[${a.label}] ` : ''}{a.fullName} — {a.line1}, {a.city} {a.postalCode}
+                      </option>
+                    ))}
+                    <option value="new">+ Enter a new address…</option>
+                  </select>
+                </div>
+              )}
+
               <div className="field"><label>EMAIL *</label><input value={form.email} onChange={set('email')} /></div>
               <div className="field"><label>FULL NAME *</label><input value={form.fullName} onChange={set('fullName')} /></div>
               <div className="field"><label>PHONE</label><input value={form.phone} onChange={set('phone')} /></div>
@@ -152,6 +232,13 @@ export default function Checkout() {
               <div className="field"><label>STATE / REGION</label><input value={form.state} onChange={set('state')} /></div>
               <div className="field"><label>POSTAL CODE *</label><input value={form.postalCode} onChange={set('postalCode')} /></div>
               <div className="field"><label>COUNTRY *</label><input value={form.country} onChange={set('country')} /></div>
+
+              {user && selectedAddressId === 'new' && (
+                <label className="muted" style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6 }}>
+                  <input type="checkbox" checked={saveAddress} onChange={(e) => setSaveAddress(e.target.checked)} />
+                  Save this address to my address book for next time
+                </label>
+              )}
             </>
           )}
 

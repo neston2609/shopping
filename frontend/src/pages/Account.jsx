@@ -5,71 +5,196 @@ import { useAuth } from '../context/AuthContext';
 
 const TABS = ['ORDERS', 'ADDRESSES', 'PROFILE'];
 
+const STATUS_LABEL = {
+  pending: 'PENDING',
+  awaiting_payment: 'AWAITING PAYMENT',
+  payment_review: 'PAYMENT UNDER REVIEW',
+  awaiting_shipment: 'PAID · PREPARING SHIPMENT',
+  paid: 'PAID',
+  shipped: 'SHIPPED',
+  delivered: 'DELIVERED',
+  cancelled: 'CANCELLED',
+};
+const STATUS_COLOR = {
+  pending: 'var(--gold)',
+  awaiting_payment: 'var(--gold)',
+  payment_review: 'var(--cyan)',
+  awaiting_shipment: 'var(--lime)',
+  paid: 'var(--lime)',
+  shipped: 'var(--cyan)',
+  delivered: 'var(--lime)',
+  cancelled: 'var(--magenta)',
+};
+
 function Orders() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [openId, setOpenId] = useState(null);
+
   useEffect(() => {
     api.get('/account/orders').then((d) => setOrders(d.orders || [])).finally(() => setLoading(false));
   }, []);
+
   if (loading) return <div className="loading">LOADING ORDERS…</div>;
   if (!orders.length) return <div className="empty-state">No orders yet. <Link to="/shop" style={{ color: 'var(--lime)' }}>Start a quest →</Link></div>;
+
   return (
     <div>
-      {orders.map((o) => (
-        <div className="panel-box" key={o.id} style={{ marginBottom: 16 }}>
-          <div className="row-between">
-            <div style={{ fontFamily: 'Press Start 2P', fontSize: 11, color: 'var(--gold)' }}>{o.orderNumber}</div>
-            <span className={`badge-status ${o.status}`}>{o.status}</span>
+      {orders.map((o) => {
+        const statusLabel = STATUS_LABEL[o.status] || o.status.toUpperCase();
+        const statusColor = STATUS_COLOR[o.status] || 'var(--ink-dim)';
+        const isBank = o.payment?.method === 'bank_transfer';
+        const needSlip = isBank && (o.status === 'awaiting_payment' || (o.status === 'pending' && o.payment?.status === 'pending'));
+        const reviewing = isBank && o.status === 'payment_review';
+        const open = openId === o.id;
+        return (
+          <div className="panel-box" key={o.id} style={{ marginBottom: 16 }}>
+            <div className="row-between">
+              <div style={{ fontFamily: 'Press Start 2P', fontSize: 11, color: 'var(--gold)' }}>{o.orderNumber}</div>
+              <span style={{ fontFamily: 'Press Start 2P', fontSize: 9, padding: '4px 8px', border: `2px solid ${statusColor}`, color: statusColor, background: '#000' }}>{statusLabel}</span>
+            </div>
+            <div className="muted" style={{ marginTop: 10 }}>
+              {new Date(o.createdAt).toLocaleString()} · {o.items.length} item{o.items.length === 1 ? '' : 's'} · <b style={{ color: 'var(--lime)' }}>฿{o.total.toFixed(2)}</b>
+            </div>
+            {o.trackingNumber && <div className="muted" style={{ marginTop: 6 }}>Tracking: <b style={{ color: '#fff' }}>{o.trackingNumber}</b></div>}
+            {o.payment && (
+              <div className="muted" style={{ marginTop: 6 }}>
+                Payment: <b style={{ color: '#fff' }}>{o.payment.method?.replace(/_/g, ' ').toUpperCase()}</b>
+                {' · '}<span style={{ color: o.payment.status === 'paid' ? 'var(--lime)' : o.payment.status === 'submitted' ? 'var(--cyan)' : 'var(--gold)' }}>{(o.payment.status || '').toUpperCase()}</span>
+              </div>
+            )}
+
+            <div style={{ marginTop: 12, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              {needSlip && (
+                <Link className="btn btn--lime btn--sm" to={`/order-confirmation/${o.orderNumber}`}>
+                  ▶ PAY / UPLOAD SLIP
+                </Link>
+              )}
+              {reviewing && (
+                <Link className="btn btn--cyan btn--sm" to={`/order-confirmation/${o.orderNumber}`}>
+                  RE-UPLOAD SLIP
+                </Link>
+              )}
+              <Link className="btn btn--ghost btn--sm" to={`/order-confirmation/${o.orderNumber}`}>VIEW</Link>
+              <button className="btn btn--ghost btn--sm" onClick={() => setOpenId(open ? null : o.id)}>
+                {open ? '▴ HIDE ITEMS' : '▾ SHOW ITEMS'}
+              </button>
+            </div>
+
+            {open && (
+              <div style={{ marginTop: 12, paddingTop: 12, borderTop: '2px dashed var(--ink-dim)' }}>
+                {o.items.map((i) => <div key={i.id} className="muted">{i.quantity}× {i.name} — ฿{i.lineTotal.toFixed(2)}</div>)}
+                {o.shipping && (
+                  <div className="muted" style={{ marginTop: 10, lineHeight: 1.6 }}>
+                    <b style={{ color: '#fff' }}>SHIP TO</b><br />
+                    {o.shipping.name}{o.shipping.phone ? ` · ${o.shipping.phone}` : ''}<br />
+                    {o.shipping.line1}{o.shipping.line2 ? `, ${o.shipping.line2}` : ''}<br />
+                    {o.shipping.city} {o.shipping.state} {o.shipping.postalCode}<br />
+                    {o.shipping.country}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
-          <div className="muted" style={{ marginTop: 10 }}>{new Date(o.createdAt).toLocaleString()} · {o.items.length} items · ฿{o.total.toFixed(2)}</div>
-          {o.trackingNumber && <div className="muted" style={{ marginTop: 6 }}>Tracking: {o.trackingNumber}</div>}
-          <div style={{ marginTop: 10 }}>
-            {o.items.map((i) => <div key={i.id} className="muted">{i.quantity}× {i.name} — ฿{i.lineTotal.toFixed(2)}</div>)}
-          </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
+  );
+}
+
+// ----- Addresses -----
+const BLANK_ADDR = { label: '', fullName: '', phone: '', line1: '', line2: '', city: '', state: '', postalCode: '', country: 'Thailand', isDefault: false };
+
+function AddressForm({ initial, onSaved, onCancel }) {
+  const [form, setForm] = useState(initial || BLANK_ADDR);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: k === 'isDefault' ? e.target.checked : e.target.value }));
+  const submit = async (e) => {
+    e.preventDefault();
+    setBusy(true); setErr('');
+    try {
+      if (initial?.id) {
+        await api.patch(`/account/addresses/${initial.id}`, form);
+      } else {
+        await api.post('/account/addresses', form);
+      }
+      onSaved();
+    } catch (ex) {
+      setErr(ex.details ? ex.details.map((d) => d.message).join('; ') : ex.message);
+    } finally { setBusy(false); }
+  };
+  return (
+    <form className="panel-box" onSubmit={submit}>
+      <h3 style={{ fontFamily: 'Press Start 2P', fontSize: 11, color: 'var(--gold)' }}>// {initial?.id ? 'EDIT ADDRESS' : 'ADD ADDRESS'}</h3>
+      {err && <div className="error-msg">{err}</div>}
+      <div className="field"><label>LABEL (optional — "Home", "Office")</label><input value={form.label || ''} onChange={set('label')} /></div>
+      <div className="field"><label>FULL NAME *</label><input value={form.fullName} onChange={set('fullName')} required /></div>
+      <div className="field"><label>PHONE</label><input value={form.phone || ''} onChange={set('phone')} /></div>
+      <div className="field"><label>ADDRESS LINE 1 *</label><input value={form.line1} onChange={set('line1')} required /></div>
+      <div className="field"><label>ADDRESS LINE 2</label><input value={form.line2 || ''} onChange={set('line2')} /></div>
+      <div className="field"><label>CITY *</label><input value={form.city} onChange={set('city')} required /></div>
+      <div className="field"><label>STATE / REGION</label><input value={form.state || ''} onChange={set('state')} /></div>
+      <div className="field"><label>POSTAL CODE *</label><input value={form.postalCode} onChange={set('postalCode')} required /></div>
+      <div className="field"><label>COUNTRY *</label><input value={form.country} onChange={set('country')} required /></div>
+      <label className="muted" style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+        <input type="checkbox" checked={!!form.isDefault} onChange={set('isDefault')} /> Set as default
+      </label>
+      <div style={{ display: 'flex', gap: 10, marginTop: 14 }}>
+        <button className="btn btn--lime" disabled={busy} style={{ flex: 1 }}>{busy ? 'SAVING…' : (initial?.id ? 'UPDATE' : 'SAVE ADDRESS')}</button>
+        {onCancel && <button type="button" className="btn btn--ghost" onClick={onCancel}>CANCEL</button>}
+      </div>
+    </form>
   );
 }
 
 function Addresses() {
   const [addresses, setAddresses] = useState([]);
-  const blank = { fullName: '', phone: '', line1: '', line2: '', city: '', state: '', postalCode: '', country: 'USA', isDefault: false };
-  const [form, setForm] = useState(blank);
+  const [editing, setEditing] = useState(null); // 'new', id, or null
   const load = () => api.get('/account/addresses').then((d) => setAddresses(d.addresses || []));
   useEffect(() => { load(); }, []);
-  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: k === 'isDefault' ? e.target.checked : e.target.value }));
-  const save = async (e) => {
-    e.preventDefault();
-    await api.post('/account/addresses', form);
-    setForm(blank);
+
+  const remove = async (id) => {
+    if (!confirm('Remove this address?')) return;
+    await api.del(`/account/addresses/${id}`);
     load();
   };
-  const remove = async (id) => { await api.del(`/account/addresses/${id}`); load(); };
+
   return (
     <div className="checkout-grid">
       <div>
         {addresses.map((a) => (
-          <div className="panel-box" key={a.id} style={{ marginBottom: 12 }}>
-            <div className="row-between">
-              <b style={{ color: '#fff' }}>{a.fullName} {a.isDefault ? '★' : ''}</b>
-              <button className="chip" onClick={() => remove(a.id)}>✕</button>
+          editing === a.id ? (
+            <div key={a.id} style={{ marginBottom: 12 }}>
+              <AddressForm initial={a} onSaved={() => { setEditing(null); load(); }} onCancel={() => setEditing(null)} />
             </div>
-            <div className="muted" style={{ marginTop: 6 }}>{a.line1}{a.line2 ? `, ${a.line2}` : ''}, {a.city} {a.state} {a.postalCode}, {a.country}</div>
-          </div>
+          ) : (
+            <div className="panel-box" key={a.id} style={{ marginBottom: 12 }}>
+              <div className="row-between">
+                <b style={{ color: '#fff' }}>{a.fullName} {a.isDefault ? <span style={{ color: 'var(--gold)' }}>★ DEFAULT</span> : ''}</b>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <button className="chip" onClick={() => setEditing(a.id)} title="Edit">EDIT</button>
+                  <button className="chip" onClick={() => remove(a.id)} title="Remove">✕</button>
+                </div>
+              </div>
+              {a.label && <div className="muted" style={{ marginTop: 6, color: 'var(--cyan)' }}>{a.label}</div>}
+              <div className="muted" style={{ marginTop: 6 }}>
+                {a.line1}{a.line2 ? `, ${a.line2}` : ''}<br/>
+                {a.city} {a.state} {a.postalCode}<br/>
+                {a.country}
+                {a.phone && <><br/>📞 {a.phone}</>}
+              </div>
+            </div>
+          )
         ))}
-        {!addresses.length && <div className="muted">No saved addresses.</div>}
+        {!addresses.length && <div className="muted">No saved addresses yet. Add one →</div>}
+        {editing !== 'new' && (
+          <button className="btn btn--cyan btn--sm" onClick={() => setEditing('new')}>+ NEW ADDRESS</button>
+        )}
       </div>
-      <form className="panel-box" onSubmit={save}>
-        <h3 style={{ fontFamily: 'Press Start 2P', fontSize: 11, color: 'var(--gold)' }}>// ADD ADDRESS</h3>
-        <div className="field"><label>FULL NAME</label><input value={form.fullName} onChange={set('fullName')} required /></div>
-        <div className="field"><label>LINE 1</label><input value={form.line1} onChange={set('line1')} required /></div>
-        <div className="field"><label>CITY</label><input value={form.city} onChange={set('city')} required /></div>
-        <div className="field"><label>POSTAL CODE</label><input value={form.postalCode} onChange={set('postalCode')} required /></div>
-        <div className="field"><label>COUNTRY</label><input value={form.country} onChange={set('country')} required /></div>
-        <label className="muted" style={{ display: 'flex', gap: 8, marginTop: 10 }}><input type="checkbox" checked={form.isDefault} onChange={set('isDefault')} /> Set as default</label>
-        <button className="btn btn--lime" style={{ width: '100%', marginTop: 14 }}>SAVE ADDRESS</button>
-      </form>
+      {editing === 'new' && (
+        <AddressForm onSaved={() => { setEditing(null); load(); }} onCancel={() => setEditing(null)} />
+      )}
     </div>
   );
 }
@@ -128,6 +253,9 @@ function Profile() {
         <div className="field"><label>NEW USERNAME (3-30 chars; clear to remove)</label><input value={cred.newUsername} onChange={setC('newUsername')} placeholder={user.username || ''} /></div>
         <div className="field"><label>NEW PASSWORD (min 8 chars)</label><input type="password" value={cred.newPassword} onChange={setC('newPassword')} autoComplete="new-password" /></div>
         <button className="btn btn--magenta" style={{ width: '100%', marginTop: 14, background: 'var(--magenta)', color: '#fff' }}>UPDATE CREDENTIALS</button>
+        <div className="muted" style={{ marginTop: 12, fontSize: 13 }}>
+          Forgot your current password? <Link to="/forgot-password" style={{ color: 'var(--cyan)' }}>Reset it via email →</Link>
+        </div>
       </form>
     </div>
   );

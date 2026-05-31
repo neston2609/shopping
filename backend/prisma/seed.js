@@ -91,6 +91,17 @@ const TEMPLATES = [
       <p>Apply it on the checkout page.</p>`),
   },
   {
+    key: 'password_reset',
+    name: 'Password Reset',
+    subject: 'Reset your RETROCONSOLE 1981 password',
+    body: shell('Password Reset', `<p>Hi {{customer_name}},</p>
+      <p>Someone (hopefully you) asked to reset the password on your RETROCONSOLE 1981 account.</p>
+      <p>Click the button below to choose a new password. This link expires in <b style="color:#ffcb3c">{{expires_in}}</b>.</p>
+      <p style="text-align:center;margin:22px 0"><a href="{{reset_link}}" style="display:inline-block;background:#a3ff3c;color:#0d0420;padding:14px 28px;font-family:'Press Start 2P','Courier New',monospace;font-size:12px;letter-spacing:2px;border:3px solid #fff;text-decoration:none">▶ RESET PASSWORD</a></p>
+      <p style="font-size:12px;color:#b9a8e0">If the button doesn't work, copy this link into your browser:<br/><span style="word-break:break-all">{{reset_link}}</span></p>
+      <p style="margin-top:18px">If you didn't ask for this, you can safely ignore this email — your password won't change.</p>`),
+  },
+  {
     key: 'admin_payment_review',
     name: 'Admin — Payment Slip Uploaded',
     subject: 'Payment slip uploaded — Order {{order_id}}',
