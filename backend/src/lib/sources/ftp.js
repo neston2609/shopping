@@ -67,8 +67,11 @@ async function runFtp(source, secure, fn) {
   try {
     const ops = {
       async list(p) {
-        // CWD into the directory segment-by-segment, then LIST cwd (no arg) —
-        // bypasses server-side glob expansion for `[ ]`, `*`, `?` in folder names.
+        // Only LIST is commonly glob-expanded by FTP servers (ProFTPD etc.),
+        // so for LIST we navigate via CWD (literal) and then `list()` with no
+        // argument. SIZE / CWD / RETR are typically literal, so we pass paths
+        // straight through and avoid the extra round-trips that bog down the
+        // category browser when there are many folders.
         await cdAbs(client, p);
         const entries = await client.list();
         return entries.map((e) => ({
@@ -79,17 +82,12 @@ async function runFtp(source, secure, fn) {
         }));
       },
       async stat(p) {
-        // Treat as a file first: CWD to its parent, ask for size by basename.
-        const dir = path.posix.dirname(p);
-        const base = path.posix.basename(p);
         try {
-          await cdAbs(client, dir);
-          const size = await client.size(base);
+          const size = await client.size(p);
           return { size, isDirectory: false };
         } catch (e) {
-          // Not a file → try CWD into the full path; if it works it's a directory.
           try {
-            await cdAbs(client, p);
+            await client.cd(p);
             return { size: 0, isDirectory: true };
           } catch (e2) {
             throw new Error(`Cannot stat ${p}: ${e.message}`);
@@ -97,11 +95,7 @@ async function runFtp(source, secure, fn) {
         }
       },
       async streamTo(p, writable) {
-        // Anchor to the file's directory, then RETR by basename — same glob defense.
-        const dir = path.posix.dirname(p);
-        const base = path.posix.basename(p);
-        await cdAbs(client, dir);
-        await client.downloadTo(writable, base);
+        await client.downloadTo(writable, p);
       },
     };
     return await fn(ops);
