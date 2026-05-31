@@ -11,7 +11,17 @@ const updateSchema = z.object({
   heroHeading: z.string().optional().or(z.literal('')),
   heroSubheading: z.string().optional().or(z.literal('')),
   lineChatEmbed: z.string().max(LINE_EMBED_MAX, `Snippet exceeds ${LINE_EMBED_MAX} characters`).optional().or(z.literal('')),
+  // Basic ID accepted with or without the leading "@". Allow letters, digits,
+  // dot, underscore, hyphen — LINE allows roughly that set.
+  lineBasicId: z.string().trim().max(40).regex(/^@?[A-Za-z0-9._-]*$/, 'Use letters/digits/._- only (e.g. @retroconsole1981)').optional().or(z.literal('')),
 });
+
+// Normalize "@retroconsole1981" / "retroconsole1981" to a consistent "@..." form.
+function normalizeBasicId(raw) {
+  if (!raw) return null;
+  const cleaned = raw.trim().replace(/^@+/, '');
+  return cleaned ? `@${cleaned}` : null;
+}
 
 async function getRow() {
   let row = await prisma.storeSettings.findFirst({ orderBy: { id: 'asc' } });
@@ -24,6 +34,7 @@ function publicSettings(row) {
     heroHeading: row.heroHeading || '',
     heroSubheading: row.heroSubheading || '',
     lineChatEmbed: row.lineChatEmbed || '',
+    lineBasicId: row.lineBasicId || '',
   };
 }
 
@@ -39,6 +50,7 @@ const update = asyncHandler(async (req, res) => {
       heroHeading: req.body.heroHeading || null,
       heroSubheading: req.body.heroSubheading || null,
       lineChatEmbed: req.body.lineChatEmbed ? req.body.lineChatEmbed.trim() : null,
+      lineBasicId: normalizeBasicId(req.body.lineBasicId),
     },
   });
   res.json({ settings: publicSettings(saved) });

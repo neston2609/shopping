@@ -68,36 +68,35 @@ export default function Layout() {
   const location = useLocation();
   const [search, setSearch] = useState('');
   const [promo, setPromo] = useState({ enabled: false, threshold: 0 });
-  const [lineChatEmbed, setLineChatEmbed] = useState('');
+  const [lineChat, setLineChat] = useState({ embed: '', basicId: '' });
   const activeKey = activeNavKey(location.pathname, location.search);
 
   useEffect(() => {
     api.get('/shipping-methods').then((d) => setPromo(d.freeShipping || { enabled: false, threshold: 0 })).catch(() => {});
-    api.get('/store-settings').then((d) => setLineChatEmbed(d.lineChatEmbed || '')).catch(() => {});
+    api
+      .get('/store-settings')
+      .then((d) => setLineChat({ embed: d.lineChatEmbed || '', basicId: d.lineBasicId || '' }))
+      .catch(() => {});
   }, []);
 
   // Inject the LINE Chat Plugin embed once per page-load (admin pastes the raw
   // snippet LINE OA Manager hands them; we parse it so <script> tags actually
-  // execute — innerHTML alone would just paint inert text). Admin replies from
-  // LINE OA Manager, so no further plumbing needed here.
+  // execute — innerHTML alone would just paint inert text). Customer replies
+  // are handled in LINE OA Manager, so no extra plumbing here.
   useEffect(() => {
-    if (!lineChatEmbed || window.__lineChatLoaded) return undefined;
+    if (!lineChat.embed || window.__lineChatLoaded) return undefined;
     window.__lineChatLoaded = true;
     try {
       const host = document.createElement('div');
       host.id = 'line-chat-embed-host';
       host.style.position = 'relative';
       host.style.zIndex = '99999';
-      // Parse the pasted HTML into a detached document so we can walk it safely.
-      const parsed = new DOMParser().parseFromString(lineChatEmbed, 'text/html');
-      const nodes = Array.from(parsed.body.childNodes);
-      for (const node of nodes) {
+      const parsed = new DOMParser().parseFromString(lineChat.embed, 'text/html');
+      for (const node of Array.from(parsed.body.childNodes)) {
         if (node.nodeType === Node.ELEMENT_NODE && node.tagName === 'SCRIPT') {
-          // Recreate the script so the browser actually executes it.
           const s = document.createElement('script');
           for (const { name, value } of node.attributes) s.setAttribute(name, value);
           if (!node.src) s.text = node.textContent || '';
-          // Append scripts directly to <body> so LINE can read its host context.
           document.body.appendChild(s);
         } else {
           host.appendChild(node.cloneNode(true));
@@ -109,7 +108,13 @@ export default function Layout() {
       console.warn('Failed to inject LINE chat embed:', e);
     }
     return () => { /* keep mounted across route changes */ };
-  }, [lineChatEmbed]);
+  }, [lineChat.embed]);
+
+  // Fallback: when no embed snippet is set but a Basic ID is — render our own
+  // floating LINE-green bubble. Opens line.me/R/ti/p/<basicId>, which works on
+  // every LINE OA (no Chat Plugin enablement needed).
+  const showCustomLineButton = !lineChat.embed && lineChat.basicId;
+  const lineDeepLink = showCustomLineButton ? `https://line.me/R/ti/p/${encodeURIComponent(lineChat.basicId)}` : null;
 
   const promoText = promo.enabled && promo.threshold > 0
     ? `FREE SHIPPING ON ORDERS OVER ฿${Number(promo.threshold).toLocaleString()}`
@@ -185,6 +190,43 @@ export default function Layout() {
       </div>
 
       <Outlet />
+
+      {showCustomLineButton && (
+        <a
+          href={lineDeepLink}
+          target="_blank"
+          rel="noopener noreferrer"
+          title="Chat us on LINE"
+          aria-label="Chat us on LINE"
+          style={{
+            position: 'fixed',
+            right: 22,
+            bottom: 22,
+            width: 64,
+            height: 64,
+            borderRadius: '50%',
+            background: '#06c755', // LINE brand green
+            color: '#fff',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: '0 8px 20px rgba(0,0,0,0.35), 0 0 0 4px rgba(6,199,85,0.18)',
+            zIndex: 99998,
+            textDecoration: 'none',
+            transition: 'transform 0.15s ease',
+          }}
+          onMouseOver={(e) => { e.currentTarget.style.transform = 'scale(1.06)'; }}
+          onMouseOut={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
+        >
+          {/* Minimal LINE chat glyph (white speech bubble + "LINE") */}
+          <svg width="34" height="34" viewBox="0 0 32 32" aria-hidden="true">
+            <path
+              fill="#fff"
+              d="M16 4C8.82 4 3 8.59 3 14.24c0 5.06 4.61 9.31 10.84 10.11.42.09.99.27 1.13.62.13.32.08.81.04 1.13l-.18 1.1c-.06.32-.26 1.27 1.11.69 1.37-.58 7.38-4.34 10.07-7.43h-.01C27.83 18.43 29 16.46 29 14.24 29 8.59 23.18 4 16 4zM10.92 17.43H8.7c-.32 0-.58-.26-.58-.58V12.4c0-.32.26-.58.58-.58.32 0 .58.26.58.58v3.87h1.64c.32 0 .58.26.58.58s-.26.58-.58.58zm2.04-.58c0 .32-.26.58-.58.58s-.58-.26-.58-.58V12.4c0-.32.26-.58.58-.58s.58.26.58.58v4.45zm5.5 0c0 .25-.16.47-.39.55-.06.02-.13.03-.19.03-.18 0-.35-.09-.46-.23l-2.27-3.09v2.74c0 .32-.26.58-.58.58s-.58-.26-.58-.58V12.4c0-.25.16-.47.4-.55.06-.02.12-.03.18-.03.18 0 .35.09.46.23l2.27 3.09V12.4c0-.32.26-.58.58-.58s.58.26.58.58v4.45zm3.7-2.78c.32 0 .58.26.58.58s-.26.58-.58.58h-1.65v1.05h1.65c.32 0 .58.26.58.58s-.26.58-.58.58h-2.22c-.32 0-.58-.26-.58-.58V12.4c0-.32.26-.58.58-.58h2.22c.32 0 .58.26.58.58s-.26.58-.58.58h-1.65v1.09h1.65z"
+            />
+          </svg>
+        </a>
+      )}
 
       <Footer />
     </div>

@@ -17,6 +17,7 @@ export default function Storefront() {
         heroHeading: form.heroHeading || '',
         heroSubheading: form.heroSubheading || '',
         lineChatEmbed: (form.lineChatEmbed || '').trim(),
+        lineBasicId: (form.lineBasicId || '').trim(),
       });
       setMsg({ ok: true, text: 'Storefront settings saved.' });
     } catch (err) {
@@ -53,23 +54,39 @@ export default function Storefront() {
         </div>
 
         <div className="px" style={{ fontSize: 11, color: 'var(--gold)', marginTop: 18, marginBottom: 6 }}>// LINE OA CHAT BUBBLE</div>
-        <div className="muted" style={{ marginBottom: 10, lineHeight: 1.6 }}>
-          Floating LINE chat button on every storefront page. Setup:
-          <ol style={{ paddingLeft: 18, marginTop: 6 }}>
-            <li>Open <a href="https://manager.line.biz/" target="_blank" rel="noreferrer" style={{ color: 'var(--cyan)' }}>LINE Official Account Manager</a> → pick your account.</li>
-            <li><b>Home</b> → <b>Chat plugin</b> (under <i>Tools</i>) → click <b>Start using</b> / <b>Get embed code</b>. Add your website domain (e.g. <code>shopping.retroconsole1981.com</code> and <code>www.retroconsole1981.com</code>) so LINE allows the bubble there.</li>
-            <li>LINE shows an embed snippet (1–2 <code>&lt;script&gt;</code> tags plus a <code>&lt;div&gt;</code>). <b>Copy the whole thing</b> and paste it in the textarea below — leave it blank to hide the bubble.</li>
-            <li>Customers click the bubble → opens LINE chat with your OA. You reply from LINE OA Manager (web or mobile app) — no other setup needed.</li>
-          </ol>
+        <div className="muted" style={{ marginBottom: 14, lineHeight: 1.6 }}>
+          A floating LINE button on every storefront page. <b>Two ways</b> — pick whichever you can set up. If both are filled, the official embed below wins.
         </div>
-        <div className="field">
-          <label>LINE CHAT EMBED SNIPPET (paste exactly what LINE gives you)</label>
-          <textarea
-            value={form.lineChatEmbed || ''}
-            onChange={set('lineChatEmbed')}
-            placeholder={'<script src="https://www.line-scdn.net/n/line_chat/loader.js" async defer></script>\n<div data-lcp="<your-plugin-id>"></div>'}
-            style={{ minHeight: 110, fontFamily: 'monospace', fontSize: 12 }}
-          />
+
+        <div className="card" style={{ marginBottom: 12, background: '#0b0220' }}>
+          <div className="px" style={{ fontSize: 10, color: 'var(--cyan)', marginBottom: 8 }}>OPTION 1 · BASIC ID (works for any OA, no LINE-side setup)</div>
+          <div className="muted" style={{ marginBottom: 10, lineHeight: 1.6 }}>
+            Find your OA's Basic ID at <a href="https://manager.line.biz/" target="_blank" rel="noreferrer" style={{ color: 'var(--cyan)' }}>LINE OA Manager</a> → click your OA → look near the OA name (e.g. <code>@retroconsole1981</code>). Paste it here and a LINE-green floating button appears on the storefront — customers tap it to open a chat with your OA, you reply from LINE OA Manager.
+          </div>
+          <div className="field">
+            <label>LINE OA BASIC ID (with or without "@")</label>
+            <input
+              value={form.lineBasicId || ''}
+              onChange={set('lineBasicId')}
+              placeholder="@retroconsole1981"
+            />
+          </div>
+        </div>
+
+        <div className="card" style={{ background: '#0b0220' }}>
+          <div className="px" style={{ fontSize: 10, color: 'var(--cyan)', marginBottom: 8 }}>OPTION 2 · OFFICIAL CHAT PLUGIN (advanced, uses LINE-hosted widget)</div>
+          <div className="muted" style={{ marginBottom: 10, lineHeight: 1.6 }}>
+            If LINE OA Manager → <b>Home → Chat plugin</b> (or <b>Settings → Chat plugin</b>) is available for your account: enable it, register your domains (<code>shopping.retroconsole1981.com</code>, <code>www.retroconsole1981.com</code>, <code>retroconsole1981.com</code>), copy the snippet LINE shows you and paste the whole thing below. <b>Can't find that menu?</b> Use Option 1 — it works for every OA.
+          </div>
+          <div className="field">
+            <label>LINE CHAT EMBED SNIPPET (paste the full {`<script>`} + {`<div>`} block from LINE)</label>
+            <textarea
+              value={form.lineChatEmbed || ''}
+              onChange={set('lineChatEmbed')}
+              placeholder={'<script src="https://www.line-scdn.net/n/line_chat/loader.js" async defer></script>\n<div data-lcp="<your-plugin-id>"></div>'}
+              style={{ minHeight: 100, fontFamily: 'monospace', fontSize: 12 }}
+            />
+          </div>
         </div>
 
         <button className="btn btn--lime" style={{ marginTop: 6 }}>SAVE</button>

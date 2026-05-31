@@ -53,6 +53,7 @@ const storeSettings = asyncHandler(async (req, res) => {
     heroHeading: row?.heroHeading || '',
     heroSubheading: row?.heroSubheading || '',
     lineChatEmbed: row?.lineChatEmbed || '',
+    lineBasicId: row?.lineBasicId || '',
   });
 });
 
