@@ -1,6 +1,22 @@
 // SFTP / FTP / FTPS protocol implementation. Receives a DownloadSource row.
+const path = require('path');
 const SftpClient = require('ssh2-sftp-client');
 const { decrypt } = require('../crypto');
+
+// Walk into a target POSIX directory one segment at a time. We do it this way
+// because many FTP servers treat the LIST/RETR argument as a glob pattern, so a
+// directory whose name contains `[ ]`, `*`, or `?` either returns empty or hits
+// the wrong path. CWD itself is literal (no glob), so navigating per-segment
+// then issuing LIST/RETR with no path is safe for any filename the server
+// accepts.
+async function cdAbs(client, target) {
+  await client.cd('/');
+  const segs = String(target || '').split('/').filter(Boolean);
+  for (const s of segs) {
+    // eslint-disable-next-line no-await-in-loop
+    await client.cd(s);
+  }
+}
 
 async function runSftp(source, fn) {
   const sftp = new SftpClient();
@@ -51,7 +67,10 @@ async function runFtp(source, secure, fn) {
   try {
     const ops = {
       async list(p) {
-        const entries = await client.list(p);
+        // CWD into the directory segment-by-segment, then LIST cwd (no arg) —
+        // bypasses server-side glob expansion for `[ ]`, `*`, `?` in folder names.
+        await cdAbs(client, p);
+        const entries = await client.list();
         return entries.map((e) => ({
           name: e.name,
           type: e.type === 2 ? 'dir' : 'file',
@@ -60,13 +79,17 @@ async function runFtp(source, secure, fn) {
         }));
       },
       async stat(p) {
+        // Treat as a file first: CWD to its parent, ask for size by basename.
+        const dir = path.posix.dirname(p);
+        const base = path.posix.basename(p);
         try {
-          const size = await client.size(p);
+          await cdAbs(client, dir);
+          const size = await client.size(base);
           return { size, isDirectory: false };
         } catch (e) {
+          // Not a file → try CWD into the full path; if it works it's a directory.
           try {
-            await client.cd(p);
-            await client.cdup();
+            await cdAbs(client, p);
             return { size: 0, isDirectory: true };
           } catch (e2) {
             throw new Error(`Cannot stat ${p}: ${e.message}`);
@@ -74,7 +97,11 @@ async function runFtp(source, secure, fn) {
         }
       },
       async streamTo(p, writable) {
-        await client.downloadTo(writable, p);
+        // Anchor to the file's directory, then RETR by basename — same glob defense.
+        const dir = path.posix.dirname(p);
+        const base = path.posix.basename(p);
+        await cdAbs(client, dir);
+        await client.downloadTo(writable, base);
       },
     };
     return await fn(ops);
@@ -91,7 +118,6 @@ async function withClient(source, fn) {
   throw new Error(`ftp.js: unsupported protocol ${proto}`);
 }
 
-const path = require('path');
 async function listAbsolute(source, absPath) {
   return withClient(source, async (ops) => {
     const target = absPath && String(absPath).trim() ? String(absPath) : source.basePath || '/';
