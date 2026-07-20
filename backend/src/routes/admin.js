@@ -15,6 +15,7 @@ const customers = require('../controllers/admin/adminCustomerController');
 const shipping = require('../controllers/admin/adminShippingController');
 const payments = require('../controllers/admin/adminPaymentController');
 const smtp = require('../controllers/admin/adminSmtpController');
+const ai = require('../controllers/admin/adminAiController');
 const templates = require('../controllers/admin/adminTemplateController');
 const misc = require('../controllers/admin/adminMiscController');
 const sftp = require('../controllers/admin/adminSftpController');
@@ -85,6 +86,14 @@ router.get('/smtp', smtp.get);
 router.put('/smtp', validate(smtp.updateSchema), smtp.update);
 router.post('/smtp/test-connection', smtp.testConnection);
 router.post('/smtp/test-email', validate(smtp.testSchema), smtp.sendTestEmail);
+
+// AI provider settings (powers all AI features)
+router.get('/ai', ai.get);
+router.put('/ai', validate(ai.updateSchema), ai.update);
+router.post('/ai/models', validate(ai.keyProbeSchema), ai.listModels);
+router.post('/ai/test', validate(ai.keyProbeSchema), ai.test);
+// AI product-image analysis (suggest product fields from photos)
+router.post('/ai/analyze-product', productImageUpload.array('images', 6), ai.analyzeProduct);
 
 // Download display settings (aff link, folder thumb height — global)
 router.get('/sftp', sftp.get);

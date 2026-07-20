@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Navigate, Link, useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { api } from '../api/client';
-import { useAuth } from '../context/AuthContext';
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
@@ -286,9 +285,7 @@ function CategoryBrowser({ slug }) {
 }
 
 export default function Downloads() {
-  const { user, loading: authLoading } = useAuth();
+  // Downloads are public — no login required to browse or download.
   const { slug } = useParams();
-  if (authLoading) return <div className="loading">LOADING…</div>;
-  if (!user) return <Navigate to="/login" state={{ from: '/downloads' }} replace />;
   return slug ? <CategoryBrowser slug={slug} /> : <CategoryGrid />;
 }

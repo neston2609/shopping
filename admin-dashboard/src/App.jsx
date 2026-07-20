@@ -10,6 +10,7 @@ import Customers from './pages/Customers';
 import Shipping from './pages/Shipping';
 import Payments from './pages/Payments';
 import Smtp from './pages/Smtp';
+import AiSettings from './pages/AiSettings';
 import Templates from './pages/Templates';
 import EmailLogs from './pages/EmailLogs';
 import Downloads from './pages/Downloads';
@@ -33,6 +34,7 @@ export default function App() {
             <Route path="/shipping" element={<Shipping />} />
             <Route path="/payments" element={<Payments />} />
             <Route path="/smtp" element={<Smtp />} />
+            <Route path="/ai" element={<AiSettings />} />
             <Route path="/templates" element={<Templates />} />
             <Route path="/email-logs" element={<EmailLogs />} />
             <Route path="/downloads" element={<Downloads />} />

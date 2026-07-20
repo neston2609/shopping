@@ -21,7 +21,51 @@ function ProductForm({ initial, categories, onClose, onSaved }) {
   }));
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [aiFiles, setAiFiles] = useState([]);
+  const [aiBusy, setAiBusy] = useState(false);
+  const [aiMsg, setAiMsg] = useState(null);
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+
+  // Send the chosen photos to the configured AI and prefill product fields.
+  const runAiAnalyst = async () => {
+    if (aiFiles.length === 0) {
+      setAiMsg({ ok: false, text: 'Choose one or more product photos first.' });
+      return;
+    }
+    setAiMsg(null);
+    setAiBusy(true);
+    try {
+      const fd = new FormData();
+      aiFiles.forEach((f) => fd.append('images', f));
+      const res = await fetch('/api/admin/ai/analyze-product', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${getToken()}` },
+        body: fd,
+        credentials: 'include',
+      });
+      const d = await res.json();
+      if (!res.ok || !d.ok) {
+        setAiMsg({ ok: false, text: d.message || d.error || 'AI analysis failed' });
+        return;
+      }
+      const s = d.suggestion;
+      setForm((f) => ({
+        ...f,
+        name: s.name || f.name,
+        description: s.description || f.description,
+        platform: s.platform || f.platform,
+        rarity: s.rarity || f.rarity,
+        price: s.price != null ? s.price : f.price,
+        // merge AI attributes with any the admin already added
+        attributes: [...f.attributes, ...(s.attributes || [])].filter((a) => a.name && a.value),
+      }));
+      setAiMsg({ ok: true, text: 'AI filled in the details below — review before saving.' });
+    } catch (err) {
+      setAiMsg({ ok: false, text: err.message });
+    } finally {
+      setAiBusy(false);
+    }
+  };
 
   const setAttr = (idx, key, val) => setForm((f) => {
     const attributes = [...f.attributes];
@@ -76,6 +120,26 @@ function ProductForm({ initial, categories, onClose, onSaved }) {
       <form className="modal" onClick={(e) => e.stopPropagation()} onSubmit={save}>
         <h2>{initial?.id ? 'EDIT PRODUCT' : 'NEW PRODUCT'}</h2>
         {error && <div className="error-msg">{error}</div>}
+
+        <div className="card" style={{ marginBottom: 16, border: '2px dashed var(--cyan, #4dd)' }}>
+          <label style={{ fontSize: 11, color: 'var(--gold, #fc0)', display: 'block', marginBottom: 8 }}>
+            ▶ AI ANALYST — upload product photo(s) and let AI draft the details
+          </label>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={(e) => { setAiFiles(Array.from(e.target.files || [])); setAiMsg(null); }}
+            />
+            <button type="button" className="btn btn--cyan btn--sm" onClick={runAiAnalyst} disabled={aiBusy}>
+              {aiBusy ? 'ANALYSING…' : 'ANALYSE WITH AI'}
+            </button>
+          </div>
+          {aiFiles.length > 0 && <div className="muted" style={{ marginTop: 6 }}>{aiFiles.length} photo(s) selected</div>}
+          {aiMsg && <div className={aiMsg.ok ? 'success-msg' : 'error-msg'} style={{ marginTop: 8 }}>{aiMsg.text}</div>}
+        </div>
+
         <div className="field"><label>NAME *</label><input value={form.name} onChange={set('name')} required /></div>
         <div className="grid2">
           <div className="field"><label>SKU *</label><input value={form.sku} onChange={set('sku')} required /></div>

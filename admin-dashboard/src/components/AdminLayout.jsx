@@ -12,6 +12,7 @@ const LINKS = [
   ['/shipping', 'SHIPPING'],
   ['/payments', 'PAYMENTS'],
   ['/smtp', 'SMTP / EMAIL'],
+  ['/ai', 'AI CONFIG'],
   ['/templates', 'TEMPLATES'],
   ['/email-logs', 'EMAIL LOGS'],
   ['/downloads', 'DOWNLOADS'],

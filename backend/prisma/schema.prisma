@@ -366,6 +366,25 @@ model SmtpSettings {
   @@map("smtp_settings")
 }
 
+// ----------------------------------------------------------------------------
+// AI provider configuration (admin) — powers all AI features across the app.
+// A single settings row. The API key is encrypted at rest (AES-256-GCM).
+// ----------------------------------------------------------------------------
+model AiSettings {
+  id          Int      @id @default(autoincrement())
+  brand       String   @default("openai") // openai | gemini | claude | custom
+  // Only used (and required) when brand = "custom". For known brands the
+  // backend supplies the correct default endpoint automatically.
+  endpointUrl String?  @map("endpoint_url")
+  apiKeyEnc   String?  @map("api_key_enc") // encrypted at rest
+  model       String?  // the selected model id, chosen from the fetched list
+  enabled     Boolean  @default(false)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("ai_settings")
+}
+
 model EmailTemplate {
   id        Int      @id @default(autoincrement())
   key       String   @unique // order_confirmation, payment_confirmation, ...
